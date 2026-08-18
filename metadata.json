@@ -1,0 +1,6 @@
+{
+  "name": "Sipol - Gestión Electoral y Territorial",
+  "description": "Sistema de gestión y organización electoral para movimientos políticos: líderes, sublíderes, personas de apoyo, puestos de votación, filtros demográficos y comunicación por WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
