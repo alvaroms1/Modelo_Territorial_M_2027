@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Contacto } from '../types';
 import {
   X,

@@ -17,7 +17,8 @@ import {
   CheckCircle,
   ExternalLink,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  Users
 } from 'lucide-react';
 
 interface LeaderDetailModalProps {
