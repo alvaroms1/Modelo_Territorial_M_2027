@@ -104,7 +104,9 @@ const MainContent: React.FC = () => {
             onEditContacto={handleEditContacto}
           />
         )}
-        {activeTab === 'leaders' && <LeadersManagement />}
+        {activeTab === 'leaders' && (
+          <LeadersManagement onOpenAddContactoModal={handleOpenAddModal} />
+        )}
         {activeTab === 'polling-stations' && <PollingStationsView />}
         {activeTab === 'whatsapp' && <WhatsAppCenter />}
         {activeTab === 'excel' && <ExcelCenter />}

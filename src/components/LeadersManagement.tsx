@@ -18,7 +18,11 @@ import {
 } from 'lucide-react';
 import { smartSearch } from '../utils/helpers';
 
-export const LeadersManagement: React.FC = () => {
+interface LeadersManagementProps {
+  onOpenAddContactoModal?: () => void;
+}
+
+export const LeadersManagement: React.FC<LeadersManagementProps> = ({ onOpenAddContactoModal }) => {
   const { visibleUsers, updateUser, deleteUser, currentUser, visibleContactos, updateContacto, deleteContacto } = useApp();
   const { confirm } = useConfirm();
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -289,13 +293,24 @@ export const LeadersManagement: React.FC = () => {
 
       {/* Hierarchical Leaders Structure Section */}
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
               <GitFork className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Estructura Territorial de Líderes</h2>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl font-bold text-white tracking-tight">Estructura Territorial de Líderes</h2>
+                {onOpenAddContactoModal && (
+                  <button
+                    onClick={onOpenAddContactoModal}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white transition px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/25 active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    NUEVO LÍDER / SUBLÍDER
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-neutral-400 mt-0.5">
                 Relación jerárquica: Líderes territoriales y sus Sublíderes asignados
               </p>
