@@ -19,6 +19,7 @@ import { smartSearch } from '../utils/helpers';
 
 export const LeadersManagement: React.FC = () => {
   const { visibleUsers, updateUser, deleteUser, currentUser, visibleContactos, updateContacto, deleteContacto } = useApp();
+  const { confirm } = useConfirm();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [leaderSearch, setLeaderSearch] = useState('');
   
@@ -82,7 +83,8 @@ export const LeadersManagement: React.FC = () => {
 
   const handleApprove = async (userId: string, userName?: string) => {
     const roleData = getPendingRoleData(userId);
-    if (!window.confirm(`¿Confirmas aprobar el acceso de ${userName || 'este usuario'} con el rol de ${formatRoleName(roleData.rol)}?`)) {
+    const isConfirmed = await confirm(`¿Confirmas aprobar el acceso de ${userName || 'este usuario'} con el rol de ${formatRoleName(roleData.rol)}?`);
+    if (!isConfirmed) {
       return;
     }
     setProcessingId(userId);
@@ -99,7 +101,8 @@ export const LeadersManagement: React.FC = () => {
   };
 
   const handleRoleChangeActive = async (userId: string, newRole: UserRole, userName?: string) => {
-    if (!window.confirm(`¿Confirmas cambiar el rol de ${userName || 'este líder'} a ${formatRoleName(newRole)}?`)) {
+    const isConfirmed = await confirm(`¿Confirmas cambiar el rol de ${userName || 'este líder'} a ${formatRoleName(newRole)}?`);
+    if (!isConfirmed) {
       return;
     }
     setProcessingId(userId);
@@ -113,7 +116,8 @@ export const LeadersManagement: React.FC = () => {
   };
 
   const handleParentLeaderChangeActive = async (id: string, parentId: string, isContacto: boolean = false, subName?: string) => {
-    if (!window.confirm(`¿Confirmas reasignar al sublíder ${subName || ''}?`)) {
+    const isConfirmed = await confirm(`¿Confirmas reasignar al sublíder ${subName || ''}?`);
+    if (!isConfirmed) {
       return;
     }
     setProcessingId(id);
@@ -130,7 +134,8 @@ export const LeadersManagement: React.FC = () => {
   };
 
   const handleReject = async (id: string, isContacto: boolean = false, name?: string) => {
-    if (window.confirm(`¿Estás seguro de eliminar a ${name || 'este usuario'}? Esta acción eliminará el registro y no se puede deshacer.`)) {
+    const isConfirmed = await confirm(`¿Estás seguro de eliminar a ${name || 'este usuario'}? Esta acción eliminará el registro y no se puede deshacer.`);
+    if (isConfirmed) {
       setProcessingId(id);
       if (isContacto) {
         await deleteContacto(id);

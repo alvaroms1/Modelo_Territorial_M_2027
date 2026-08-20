@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { X, ExternalLink, ClipboardPaste, MapPin, Map, Building, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LOCALIDADES_CARTAGENA } from '../data/cartagenaData';
 
@@ -10,6 +11,7 @@ interface AddPollingStationModalProps {
 
 export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ isOpen, onClose }) => {
   const { addPollingStation } = useApp();
+  const { confirm } = useConfirm();
 
   const [nombrePuesto, setNombrePuesto] = useState('');
   const [comunaLocalidad, setComunaLocalidad] = useState('');
@@ -82,7 +84,8 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
       return;
     }
 
-    if (!window.confirm(`¿Confirmas registrar el nuevo puesto de votación "${nombrePuesto.trim().toUpperCase()}"?`)) {
+    const isConfirmed = await confirm(`¿Confirmas registrar el nuevo puesto de votación "${nombrePuesto.trim().toUpperCase()}"?`);
+    if (!isConfirmed) {
       return;
     }
 
@@ -173,7 +176,7 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
                 </label>
                 <button
                   type="button"
-                  onClick={handlePaste}
+                  onClick={handlePasteNombre}
                   className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition cursor-pointer"
                   title="Pegar texto del portapapeles"
                 >
@@ -225,7 +228,9 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
                 >
                   <option value="">Seleccionar Barrio...</option>
                   {allBarrios.map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                    <option key={b.barrio} value={b.barrio}>
+                      {b.barrio} ({b.localidad.split(':')[0]})
+                    </option>
                   ))}
                 </select>
               </div>

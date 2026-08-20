@@ -25,6 +25,7 @@ interface AddContactoModalProps {
 
 export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onClose, contactoToEdit }) => {
   const { addContacto, updateContacto, currentUser, pollingStations, users, contactos } = useApp();
+  const { confirm } = useConfirm();
   
   // Basic Form States
   const [cedula, setCedula] = useState('');
@@ -250,7 +251,8 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
       return;
     }
 
-    if (!window.confirm(contactoToEdit ? `¿Deseas guardar los cambios del contacto "${nombres.trim()} ${apellidos.trim()}"?` : `¿Confirmas registrar al contacto "${nombres.trim()} ${apellidos.trim()}"?`)) {
+    const isConfirmed = await confirm(contactoToEdit ? `¿Deseas guardar los cambios del contacto "${nombres.trim()} ${apellidos.trim()}"?` : `¿Confirmas registrar al contacto "${nombres.trim()} ${apellidos.trim()}"?`);
+    if (!isConfirmed) {
       return;
     }
 

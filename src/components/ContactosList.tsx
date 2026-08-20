@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Contacto } from '../types';
 import {
   Search, RefreshCw, Vote, MapPin, Users, Calendar,
@@ -15,6 +16,7 @@ interface ContactosListProps {
 
 export const ContactosList: React.FC<ContactosListProps> = ({ onOpenAddModal, onEditContacto }) => {
   const { visibleContactos, pollingStations, users, deleteContacto, currentUser } = useApp();
+  const { confirm } = useConfirm();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [puestoFiltro, setPuestoFiltro] = useState('');
@@ -116,7 +118,8 @@ export const ContactosList: React.FC<ContactosListProps> = ({ onOpenAddModal, on
 
   const handleDelete = async (contacto: any) => {
     const fullName = `${contacto.nombres || ''} ${contacto.apellidos || ''}`.trim() || 'este contacto';
-    if (window.confirm(`¿Estás seguro de que deseas eliminar al contacto "${fullName}"? Esta acción no se puede deshacer.`)) {
+    const isConfirmed = await confirm(`¿Estás seguro de que deseas eliminar al contacto "${fullName}"? Esta acción no se puede deshacer.`);
+    if (isConfirmed) {
       if (contacto.isUserMirror) {
         alert('Este es un Líder con cuenta de acceso real. Para gestionar su usuario, hágalo desde el módulo "Líderes".');
       } else {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { X, Building, MapPin, Map, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LOCALIDADES_CARTAGENA } from '../data/cartagenaData';
 import { PollingStation } from '../types';
@@ -16,6 +17,7 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
   onClose
 }) => {
   const { updatePollingStation } = useApp();
+  const { confirm } = useConfirm();
 
   const [codigoPuesto, setCodigoPuesto] = useState('');
   const [nombrePuesto, setNombrePuesto] = useState('');
@@ -72,7 +74,8 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
       return;
     }
 
-    if (!window.confirm(`¿Deseas guardar los cambios del puesto "${nombrePuesto}"?`)) {
+    const isConfirmed = await confirm(`¿Deseas guardar los cambios del puesto "${nombrePuesto}"?`);
+    if (!isConfirmed) {
       return;
     }
 

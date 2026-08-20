@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { LOCALIDADES_CARTAGENA } from '../data/cartagenaData';
 import { TipoActividad, Actividad } from '../types';
 import {
@@ -27,6 +28,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
   initialActivity
 }) => {
   const { currentUser, users, pollingStations, addActividad, updateActividad } = useApp();
+  const { confirm } = useConfirm();
 
   const allBarrios = useMemo(() => {
     const list: string[] = [];
@@ -73,7 +75,8 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
       return;
     }
 
-    if (!window.confirm(initialActivity ? '¿Deseas guardar los cambios de esta actividad territorial?' : '¿Confirmas registrar esta nueva actividad territorial?')) {
+    const isConfirmed = await confirm(initialActivity ? '¿Deseas guardar los cambios de esta actividad territorial?' : '¿Confirmas registrar esta nueva actividad territorial?');
+    if (!isConfirmed) {
       return;
     }
 
