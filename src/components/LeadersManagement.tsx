@@ -63,7 +63,9 @@ export const LeadersManagement: React.FC = () => {
       [userId]: {
         ...getPendingRoleData(userId),
         rol,
-        lider_principal_id: (rol === 'SUBLIDER' || rol === 'LIDER') ? prev[userId]?.lider_principal_id || principalLeaders[0]?.id : undefined
+        lider_principal_id: (rol === 'SUBLIDER' || rol === 'LIDER') 
+          ? (currentUser?.rol === 'ADMIN' ? (prev[userId]?.lider_principal_id || principalLeaders[0]?.id) : currentUser?.id)
+          : undefined
       }
     }));
   };
@@ -88,7 +90,9 @@ export const LeadersManagement: React.FC = () => {
     await updateUser(userId, {
       estado: 'ACTIVO',
       rol: roleData.rol,
-      lider_principal_id: (roleData.rol === 'SUBLIDER' || roleData.rol === 'LIDER') ? roleData.lider_principal_id : undefined
+      lider_principal_id: (roleData.rol === 'SUBLIDER' || roleData.rol === 'LIDER') 
+        ? (currentUser?.rol === 'ADMIN' ? roleData.lider_principal_id : currentUser?.id)
+        : undefined
     });
     
     setProcessingId(null);
@@ -101,7 +105,9 @@ export const LeadersManagement: React.FC = () => {
     setProcessingId(userId);
     await updateUser(userId, {
       rol: newRole,
-      lider_principal_id: (newRole === 'SUBLIDER' || newRole === 'LIDER') ? principalLeaders[0]?.id : undefined
+      lider_principal_id: (newRole === 'SUBLIDER' || newRole === 'LIDER') 
+        ? (currentUser?.rol === 'ADMIN' ? principalLeaders[0]?.id : currentUser?.id) 
+        : undefined
     });
     setProcessingId(null);
   };
@@ -227,7 +233,7 @@ export const LeadersManagement: React.FC = () => {
                               <option value="LIDER">Líder</option>
                             </select>
 
-                          {isSubliderOrLider && (
+                          {isSubliderOrLider && currentUser?.rol === 'ADMIN' && (
                             <select
                               value={roleData.lider_principal_id || ''}
                               onChange={(e) => handlePendingParentLeaderChange(user.id, e.target.value)}
