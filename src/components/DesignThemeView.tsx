@@ -124,14 +124,14 @@ export const DesignThemeView: React.FC = () => {
               onClick={() => setTheme(t.id)}
               className={`group relative rounded-3xl p-6 transition-all duration-200 cursor-pointer border-2 shadow-lg flex flex-col justify-between overflow-hidden ${
                 isActive
-                  ? 'border-emerald-500 bg-neutral-900/90 shadow-emerald-500/10 ring-4 ring-emerald-500/20 scale-[1.01]'
-                  : 'border-neutral-800/80 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-900/80 hover:shadow-xl'
+                  ? 'border-emerald-500 bg-neutral-900 shadow-emerald-500/10 ring-4 ring-emerald-500/20 scale-[1.01]'
+                  : 'border-neutral-800/80 bg-neutral-900 hover:border-neutral-700 hover:shadow-xl'
               }`}
             >
               {/* Indicador de Activo */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-200 border border-neutral-700">
+                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-200 border border-neutral-700 shadow-sm">
                     {t.badge}
                   </span>
                   {isActive && (
