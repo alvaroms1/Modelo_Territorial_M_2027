@@ -14,7 +14,8 @@ import {
   UserPlus,
   Shield,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Palette
 } from 'lucide-react';
 
 export type NavTab = 'dashboard' | 'contactos' | 'leaders' | 'polling-stations' | 'whatsapp' | 'excel' | 'design';
