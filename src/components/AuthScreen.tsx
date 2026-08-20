@@ -97,8 +97,8 @@ export const AuthScreen: React.FC = () => {
             <img src="/logo_mendozismo.png" alt="Mendozismo" className="w-full h-full object-contain" />
           </div>
         </div>
-        <h2 className="mt-5 text-center text-3xl font-black text-neutral-100 tracking-tight">
-          Modelo Mendozismo
+        <h2 className="mt-5 text-center text-2xl sm:text-3xl font-black text-neutral-100 tracking-tight">
+          Modelo Territorial Mendozista
         </h2>
         <p className="mt-1 text-center text-xs sm:text-sm text-neutral-400">
           Sistema Integrado de Control Territorial y Gestión Electoral
