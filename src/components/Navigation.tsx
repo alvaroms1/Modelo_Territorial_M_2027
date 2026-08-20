@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { useConfirm } from '../context/ConfirmContext';
 import {
   LayoutDashboard,
   Users,
@@ -32,6 +33,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenAddContactoModal,
 }) => {
   const { currentUser, logout, visibleContactos } = useApp();
+  const { confirm } = useConfirm();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -213,8 +215,9 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+                      onClick={async () => {
+                        const isConfirmed = await confirm('¿Estás seguro de que deseas cerrar tu sesión?');
+                        if (isConfirmed) {
                           logout();
                           setShowRoleMenu(false);
                         }
@@ -380,8 +383,9 @@ export const Navigation: React.FC<NavigationProps> = ({
 
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+                onClick={async () => {
+                  const isConfirmed = await confirm('¿Estás seguro de que deseas cerrar tu sesión?');
+                  if (isConfirmed) {
                     setIsMobileDrawerOpen(false);
                     logout();
                   }

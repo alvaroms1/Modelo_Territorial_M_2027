@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import { AuthScreen } from './components/AuthScreen';
 import { Navigation, NavTab } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
@@ -85,7 +86,9 @@ const MainContent: React.FC = () => {
 export default function App() {
   return (
     <AppProvider>
-      <MainContent />
+      <ConfirmProvider>
+        <MainContent />
+      </ConfirmProvider>
     </AppProvider>
   );
 }
