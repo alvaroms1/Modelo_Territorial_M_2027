@@ -22,6 +22,13 @@ const MainContent: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contactoToEdit, setContactoToEdit] = useState<Contacto | null>(null);
 
+  // Reset tab to dashboard on logout/login
+  useEffect(() => {
+    if (!currentUser) {
+      setActiveTab('dashboard');
+    }
+  }, [currentUser]);
+
   // Inactivity Auto-Logout
   useEffect(() => {
     if (!currentUser) return;
