@@ -1,521 +1,395 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import {
   UserAccount,
-  Supporter,
+  Contacto,
   PollingStation,
   FilterState,
-  MovementStats,
+  Actividad,
+  AsignacionPuesto
 } from '../types';
-import {
-  INITIAL_USERS,
-  INITIAL_SUPPORTERS,
-  INITIAL_POLLING_STATIONS,
-} from '../data/initialData';
+import { LOCALIDADES_CARTAGENA, CARTAGENA_POLLING_STATIONS } from '../data/cartagenaData';
 
 interface AppContextType {
   currentUser: UserAccount | null;
   users: UserAccount[];
-  supporters: Supporter[];
+  contactos: Contacto[];
   pollingStations: PollingStation[];
+  actividades: Actividad[];
+  asignaciones: AsignacionPuesto[];
   filters: FilterState;
-  login: (cedula: string, password?: string) => boolean;
+  isLoading: boolean;
+  login: (cedula: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (userData: Partial<UserAccount>) => Promise<{ success: boolean; error?: string }>;
+  updateUserStatus: (userId: string, newEstado: string) => Promise<{ success: boolean; error?: string }>;
+  updateUser: (userId: string, updates: Partial<UserAccount>) => Promise<{ success: boolean; error?: string }>;
+  deleteUser: (userId: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  switchUser: (userId: string) => void;
-  registerUser: (userData: Omit<UserAccount, 'id' | 'createdAt' | 'status'>) => UserAccount;
-  updateUser: (user: UserAccount) => void;
-  deleteUser: (userId: string) => void;
-  addSupporter: (data: Omit<Supporter, 'id' | 'createdAt'>) => { success: boolean; error?: string; supporter?: Supporter };
-  updateSupporter: (supporter: Supporter) => void;
-  deleteSupporter: (supporterId: string) => void;
-  bulkAddSupporters: (data: Array<Omit<Supporter, 'id' | 'createdAt'>>) => { added: number; duplicates: number; duplicateCedulas: string[] };
-  addPollingStation: (station: Omit<PollingStation, 'id'>) => void;
-  updatePollingStation: (station: PollingStation) => void;
-  deletePollingStation: (stationId: string) => void;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   resetFilters: () => void;
-  toggleWhatsappContacted: (supporterId: string) => void;
-  toggleVotedStatus: (supporterId: string) => void;
-  checkCedulaExists: (cedula: string) => Supporter | null;
-  resetToDemoData: () => void;
-  visibleSupporters: Supporter[];
-  accessibleSupporters: Supporter[];
-  visibleLeaders: UserAccount[];
-  visibleSubleaders: UserAccount[];
-  stats: MovementStats;
-  allSectors: string[];
-  allNeighborhoods: string[];
+  visibleContactos: Contacto[];
+  visibleUsers: UserAccount[];
+  fetchData: () => Promise<void>;
+  addContacto: (contacto: Omit<Contacto, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
+  updateContacto: (id: string, updates: Partial<Contacto>) => Promise<{ success: boolean; error?: string }>;
+  addActividad: (actividad: Omit<Actividad, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
+  updateActividad: (id: string, updates: Partial<Actividad>) => Promise<{ success: boolean; error?: string }>;
+  deleteActividad: (id: string) => Promise<{ success: boolean; error?: string }>;
+  addPollingStation: (station: Omit<PollingStation, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
+  updatePollingStation: (id: string, updates: Partial<PollingStation>) => Promise<{ success: boolean; error?: string }>;
+  deletePollingStation: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const initialFilters: FilterState = {
   searchQuery: '',
-  pollingStationId: '',
-  sector: '',
-  neighborhood: '',
-  gender: '',
-  ageBracket: '',
-  leaderId: '',
-  subleaderId: '',
-  votingCommitment: '',
+  puesto_id: '',
+  comuna_localidad: '',
+  barrio: '',
+  estado: '',
+  lider_id: '',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state with localStorage or mock data
-  const [users, setUsers] = useState<UserAccount[]>(() => {
-    const saved = localStorage.getItem('sipol_users');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_USERS;
-  });
-
-  const [supporters, setSupporters] = useState<Supporter[]>(() => {
-    const saved = localStorage.getItem('sipol_supporters');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_SUPPORTERS;
-  });
-
-  const [pollingStations, setPollingStations] = useState<PollingStation[]>(() => {
-    const saved = localStorage.getItem('sipol_polling_stations');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_POLLING_STATIONS;
-  });
-
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
-    const savedId = localStorage.getItem('sipol_current_user_id');
-    if (savedId) {
-      const found = users.find(u => u.id === savedId);
-      if (found) return found;
-    }
-    // Default to Super Admin for immediate rich view
-    return users.find(u => u.role === 'SUPER_ADMIN') || users[0] || null;
-  });
-
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [contactos, setContactos] = useState<Contacto[]>([]);
+  const [pollingStations, setPollingStations] = useState<PollingStation[]>([]);
+  const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [asignaciones, setAsignaciones] = useState<AsignacionPuesto[]>([]);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Sync to localStorage
+  // Auto-login from local storage token
   useEffect(() => {
-    localStorage.setItem('sipol_users', JSON.stringify(users));
+    const savedUserId = localStorage.getItem('mendozismo_current_user_id');
+    if (savedUserId && users.length > 0) {
+      const user = users.find(u => u.id === savedUserId);
+      if (user) setCurrentUser(user);
+    }
   }, [users]);
 
-  useEffect(() => {
-    localStorage.setItem('sipol_supporters', JSON.stringify(supporters));
-  }, [supporters]);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [
+        { data: usersData },
+        { data: contactosData },
+        { data: puestosData },
+        { data: actData },
+        { data: asigData }
+      ] = await Promise.all([
+        supabase.from('lideres').select('*'),
+        supabase.from('contactos').select('*'),
+        supabase.from('puestos_votacion').select('*'),
+        supabase.from('actividades').select('*'),
+        supabase.from('asignacion_puestos').select('*'),
+      ]);
 
-  useEffect(() => {
-    localStorage.setItem('sipol_polling_stations', JSON.stringify(pollingStations));
-  }, [pollingStations]);
+      if (usersData) setUsers(usersData as UserAccount[]);
+      if (contactosData) setContactos(contactosData as Contacto[]);
+      
+      // Combine database polling stations with seed polling stations
+      const dbStations = (puestosData || []) as PollingStation[];
+      const combinedMap = new Map<string, PollingStation>();
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('sipol_current_user_id', currentUser.id);
-    } else {
-      localStorage.removeItem('sipol_current_user_id');
+      // 1. First add seed stations
+      CARTAGENA_POLLING_STATIONS.forEach(seed => {
+        combinedMap.set(seed.nombre_puesto.trim().toUpperCase(), {
+          ...seed,
+          comuna_localidad: seed.comuna_localidad || '',
+          barrio_corregimiento: seed.barrio_corregimiento || ''
+        } as PollingStation);
+      });
+
+      // 2. Override or add from database
+      dbStations.forEach(db => {
+        const key = (db.nombre_puesto || '').trim().toUpperCase();
+        if (combinedMap.has(key)) {
+          const existing = combinedMap.get(key)!;
+          combinedMap.set(key, {
+            ...existing,
+            ...db,
+            // Only override if db value is non-empty, or preserve updated values
+            comuna_localidad: db.comuna_localidad ?? existing.comuna_localidad,
+            barrio_corregimiento: db.barrio_corregimiento ?? existing.barrio_corregimiento,
+            direccion: db.direccion ?? existing.direccion
+          });
+        } else {
+          combinedMap.set(db.id, db);
+        }
+      });
+
+      const combinedStations = Array.from(combinedMap.values()).sort((a, b) => 
+        (a.nombre_puesto || '').localeCompare(b.nombre_puesto || '')
+      );
+
+      setPollingStations(combinedStations);
+
+      if (actData) setActividades(actData as Actividad[]);
+      if (asigData) setAsignaciones(asigData as AsignacionPuesto[]);
+    } catch (error) {
+      console.error('Error fetching data from Supabase:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentUser]);
+  }, []);
 
-  // Auth actions
-  const login = (cedula: string, _password?: string): boolean => {
-    const clean = cedula.replace(/\D/g, '');
-    const user = users.find(u => u.cedula.replace(/\D/g, '') === clean);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const login = async (cedula: string, password?: string): Promise<{ success: boolean; error?: string }> => {
+    const user = users.find(u => u.cedula === cedula && u.password === password);
     if (user) {
+      if (user.estado !== 'ACTIVO' && user.rol !== 'ADMIN' && user.rol !== 'LIDER_PRINCIPAL') {
+        return { success: false, error: 'Su cuenta está pendiente de aprobación por el Administrador.' };
+      }
       setCurrentUser(user);
-      return true;
+      localStorage.setItem('mendozismo_current_user_id', user.id);
+      return { success: true };
     }
-    return false;
+    return { success: false, error: 'Credenciales incorrectas o usuario no encontrado.' };
+  };
+
+  const registerUser = async (userData: Partial<UserAccount>) => {
+    if (!userData.cedula || !userData.password || !userData.nombre_completo) {
+      return { success: false, error: 'Faltan campos obligatorios' };
+    }
+    if (!userData.consentimiento_datos) {
+      return { success: false, error: 'Debe aceptar el uso de datos (Habeas Data)' };
+    }
+    
+    // Check if cedula already exists locally
+    if (users.some(u => u.cedula === userData.cedula)) {
+      return { success: false, error: 'La cédula ya está registrada.' };
+    }
+
+    const newUser = {
+      cedula: userData.cedula,
+      password: userData.password,
+      nombre_completo: userData.nombre_completo,
+      telefono: userData.telefono || null,
+      correo: userData.correo || null,
+      consentimiento_datos: userData.consentimiento_datos,
+      rol: 'LIDER_PRINCIPAL',
+      estado: 'EN_PAUSA'
+    };
+
+    const { data, error } = await supabase.from('lideres').insert([newUser]).select();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (data && data.length > 0) {
+      const createdUser = data[0] as UserAccount;
+      setUsers(prev => [...prev, createdUser]);
+      // Do NOT set current user, they must be approved first.
+      return { success: true };
+    }
+    
+    return { success: false, error: 'Error al registrar usuario.' };
+  };
+
+  const updateUserStatus = async (userId: string, newEstado: string) => {
+    const { error } = await supabase.from('lideres').update({ estado: newEstado }).eq('id', userId);
+    if (error) return { success: false, error: error.message };
+    
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, estado: newEstado as any } : u));
+    return { success: true };
+  };
+
+  const updateUser = async (userId: string, updates: Partial<UserAccount>) => {
+    const { error } = await supabase.from('lideres').update(updates).eq('id', userId);
+    if (error) return { success: false, error: error.message };
+    
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    return { success: true };
+  };
+
+  const deleteUser = async (userId: string) => {
+    const { error } = await supabase.from('lideres').delete().eq('id', userId);
+    if (error) return { success: false, error: error.message };
+    
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    return { success: true };
   };
 
   const logout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('mendozismo_current_user_id');
   };
 
-  const switchUser = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
-      // Reset subleader & leader filters when switching user
-      setFilters(prev => ({ ...prev, leaderId: '', subleaderId: '' }));
+  const resetFilters = () => setFilters(initialFilters);
+
+  const addContacto = async (contacto: Omit<Contacto, 'id' | 'created_at'>) => {
+    if (!contacto.consentimiento_datos) {
+      return { success: false, error: 'El consentimiento de datos es obligatorio.' };
     }
+    const { data, error } = await supabase.from('contactos').insert([contacto]).select();
+    if (error) return { success: false, error: error.message };
+    if (data) setContactos(prev => [data[0] as Contacto, ...prev]);
+    return { success: true };
   };
 
-  const registerUser = (userData: Omit<UserAccount, 'id' | 'createdAt' | 'status'>): UserAccount => {
-    const colors = [
-      'from-blue-500 to-indigo-600',
-      'from-emerald-500 to-teal-600',
-      'from-purple-500 to-pink-600',
-      'from-amber-500 to-orange-600',
-      'from-cyan-500 to-sky-600',
-    ];
-    const newUser: UserAccount = {
-      ...userData,
-      id: `user-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      status: 'ACTIVO',
-      avatarColor: colors[Math.floor(Math.random() * colors.length)],
-    };
-    setUsers(prev => [...prev, newUser]);
-    return newUser;
-  };
-
-  const updateUser = (updatedUser: UserAccount) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (currentUser?.id === updatedUser.id) {
-      setCurrentUser(updatedUser);
+  const updateContacto = async (id: string, updates: Partial<Contacto>) => {
+    const { data, error } = await supabase.from('contactos').update(updates).eq('id', id).select();
+    if (error) return { success: false, error: error.message };
+    if (data) {
+      setContactos(prev => prev.map(c => c.id === id ? { ...c, ...data[0] } : c));
     }
+    return { success: true };
   };
 
-  const deleteUser = (userId: string) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    if (currentUser?.id === userId) {
-      const fallback = users.find(u => u.id !== userId) || null;
-      setCurrentUser(fallback);
+  const deleteContacto = async (id: string) => {
+    const { error } = await supabase.from('contactos').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    setContactos(prev => prev.filter(c => c.id !== id));
+    return { success: true };
+  };
+
+  const addActividad = async (actividad: Omit<Actividad, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('actividades').insert([actividad]).select();
+    if (error) return { success: false, error: error.message };
+    if (data) setActividades(prev => [data[0] as Actividad, ...prev]);
+    return { success: true };
+  };
+
+  const updateActividad = async (id: string, updates: Partial<Actividad>) => {
+    const { data, error } = await supabase.from('actividades').update(updates).eq('id', id).select();
+    if (error) return { success: false, error: error.message };
+    if (data) {
+      setActividades(prev => prev.map(a => a.id === id ? { ...a, ...data[0] } : a));
     }
+    return { success: true };
   };
 
-  const checkCedulaExists = (cedula: string): Supporter | null => {
-    const clean = cedula.replace(/\D/g, '');
-    return supporters.find(s => s.cedula.replace(/\D/g, '') === clean) || null;
+  const deleteActividad = async (id: string) => {
+    const { error } = await supabase.from('actividades').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    setActividades(prev => prev.filter(a => a.id !== id));
+    return { success: true };
   };
 
-  const addSupporter = (data: Omit<Supporter, 'id' | 'createdAt'>): { success: boolean; error?: string; supporter?: Supporter } => {
-    const cleanCedula = data.cedula.replace(/\D/g, '');
-    if (!cleanCedula) {
-      return { success: false, error: 'La cédula es obligatoria.' };
-    }
-    const existing = checkCedulaExists(cleanCedula);
-    if (existing) {
-      return {
-        success: false,
-        error: `La cédula ${data.cedula} ya fue registrada por ${existing.registeredByLeaderName} ${existing.registeredBySubleaderName ? `(Sublíder: ${existing.registeredBySubleaderName})` : ''}.`,
-      };
-    }
-
-    const newSupporter: Supporter = {
-      ...data,
-      cedula: cleanCedula,
-      id: `sup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    setSupporters(prev => [newSupporter, ...prev]);
-    return { success: true, supporter: newSupporter };
+  const addPollingStation = async (station: Omit<PollingStation, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('puestos_votacion').insert([station]).select();
+    if (error) return { success: false, error: error.message };
+    if (data) setPollingStations(prev => [...prev, data[0] as PollingStation]);
+    return { success: true };
   };
 
-  const updateSupporter = (updated: Supporter) => {
-    setSupporters(prev => prev.map(s => s.id === updated.id ? updated : s));
-  };
+  const updatePollingStation = async (id: string, updates: Partial<PollingStation>) => {
+    try {
+      const station = pollingStations.find(p => p.id === id);
+      if (!station) return { success: false, error: 'Puesto no encontrado' };
 
-  const deleteSupporter = (supporterId: string) => {
-    setSupporters(prev => prev.filter(s => s.id !== supporterId));
-  };
+      const updatedStation = { ...station, ...updates };
 
-  const bulkAddSupporters = (items: Array<Omit<Supporter, 'id' | 'createdAt'>>) => {
-    const existingCedulas = new Set(supporters.map(s => s.cedula.replace(/\D/g, '')));
-    const duplicateCedulas: string[] = [];
-    const newItems: Supporter[] = [];
-
-    items.forEach((item, index) => {
-      const cleanCedula = item.cedula.replace(/\D/g, '');
-      if (!cleanCedula || existingCedulas.has(cleanCedula)) {
-        if (cleanCedula) duplicateCedulas.push(cleanCedula);
-      } else {
-        existingCedulas.add(cleanCedula);
-        newItems.push({
-          ...item,
-          cedula: cleanCedula,
-          id: `sup-bulk-${Date.now()}-${index}`,
-          createdAt: new Date().toISOString(),
+      // Upsert to Supabase
+      const { error: dbError } = await supabase
+        .from('puestos_votacion')
+        .upsert({
+          id: updatedStation.id,
+          codigo_puesto: updatedStation.codigo_puesto,
+          nombre_puesto: updatedStation.nombre_puesto,
+          comuna_localidad: updatedStation.comuna_localidad || '',
+          barrio_corregimiento: updatedStation.barrio_corregimiento || '',
+          direccion: updatedStation.direccion || '',
+          zona_influencia: updatedStation.zona_influencia || ''
         });
+
+      if (dbError) {
+        console.error('Error updating polling station in Supabase:', dbError);
       }
-    });
 
-    if (newItems.length > 0) {
-      setSupporters(prev => [...newItems, ...prev]);
+      setPollingStations(prev => prev.map(p => p.id === id ? updatedStation : p));
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error in updatePollingStation:', err);
+      return { success: false, error: err.message || 'Error al actualizar puesto' };
     }
-
-    return {
-      added: newItems.length,
-      duplicates: duplicateCedulas.length,
-      duplicateCedulas,
-    };
   };
 
-  const addPollingStation = (station: Omit<PollingStation, 'id'>) => {
-    const newStation: PollingStation = {
-      ...station,
-      id: `ps-${Date.now()}`,
-    };
-    setPollingStations(prev => [...prev, newStation]);
-  };
-
-  const updatePollingStation = (station: PollingStation) => {
-    setPollingStations(prev => prev.map(ps => ps.id === station.id ? station : ps));
-  };
-
-  const deletePollingStation = (stationId: string) => {
-    setPollingStations(prev => prev.filter(ps => ps.id !== stationId));
-  };
-
-  const resetFilters = () => {
-    setFilters(initialFilters);
-  };
-
-  const toggleWhatsappContacted = (supporterId: string) => {
-    setSupporters(prev => prev.map(s => {
-      if (s.id === supporterId) {
-        return { ...s, contactedViaWhatsapp: !s.contactedViaWhatsapp };
+  const deletePollingStation = async (id: string) => {
+    try {
+      const { error } = await supabase.from('puestos_votacion').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting in Supabase:', error);
       }
-      return s;
-    }));
+      setPollingStations(prev => prev.filter(p => p.id !== id));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   };
 
-  const toggleVotedStatus = (supporterId: string) => {
-    setSupporters(prev => prev.map(s => {
-      if (s.id === supporterId) {
-        return { ...s, votedStatus: !s.votedStatus };
-      }
-      return s;
-    }));
-  };
-
-  const resetToDemoData = () => {
-    setUsers(INITIAL_USERS);
-    setSupporters(INITIAL_SUPPORTERS);
-    setPollingStations(INITIAL_POLLING_STATIONS);
-    setCurrentUser(INITIAL_USERS[0]);
-    setFilters(initialFilters);
-    localStorage.removeItem('sipol_users');
-    localStorage.removeItem('sipol_supporters');
-    localStorage.removeItem('sipol_polling_stations');
-    localStorage.removeItem('sipol_current_user_id');
-  };
-
-  // Base dataset accessible to current user according to role
-  const accessibleSupporters = useMemo(() => {
+  const visibleContactos = useMemo(() => {
     if (!currentUser) return [];
-
-    if (currentUser.role === 'SUPER_ADMIN') {
-      return supporters;
+    
+    // Filter by role access
+    let accessible = contactos;
+    if (currentUser.rol === 'LIDER_PRINCIPAL_INVITADO') {
+      const mySubleaders = users.filter(u => u.lider_principal_id === currentUser.id).map(u => u.id);
+      accessible = contactos.filter(c => c.lider_id === currentUser.id || mySubleaders.includes(c.lider_id));
+    } else if (currentUser.rol === 'SUBLIDER' || currentUser.rol === 'LIDER') {
+      accessible = contactos.filter(c => c.lider_id === currentUser.id);
     }
 
-    if (currentUser.role === 'LIDER_COORDINADOR') {
-      // Find sublíderes that belong to this leader
-      const mySubleaderIds = new Set(
-        users.filter(u => u.parentLeaderId === currentUser.id).map(u => u.id)
-      );
-      return supporters.filter(s =>
-        s.registeredByLeaderId === currentUser.id ||
-        (s.registeredBySubleaderId && mySubleaderIds.has(s.registeredBySubleaderId))
-      );
-    }
-
-    if (currentUser.role === 'SUBLIDER') {
-      return supporters.filter(s =>
-        s.registeredBySubleaderId === currentUser.id ||
-        (s.registeredByLeaderId === currentUser.id)
-      );
-    }
-
-    return supporters;
-  }, [currentUser, supporters, users]);
-
-  // Visible sublíderes according to current user role
-  const visibleSubleaders = useMemo(() => {
-    if (!currentUser) return [];
-    if (currentUser.role === 'SUPER_ADMIN') {
-      return users.filter(u => u.role === 'SUBLIDER');
-    }
-    if (currentUser.role === 'LIDER_COORDINADOR') {
-      return users.filter(u => u.role === 'SUBLIDER' && u.parentLeaderId === currentUser.id);
-    }
-    if (currentUser.role === 'SUBLIDER') {
-      return users.filter(u => u.id === currentUser.id);
-    }
-    return [];
-  }, [currentUser, users]);
-
-  // Visible leaders according to current user role
-  const visibleLeaders = useMemo(() => {
-    if (!currentUser) return [];
-    if (currentUser.role === 'SUPER_ADMIN') {
-      return users.filter(u => u.role === 'LIDER_COORDINADOR');
-    }
-    if (currentUser.role === 'LIDER_COORDINADOR') {
-      return users.filter(u => u.id === currentUser.id);
-    }
-    if (currentUser.role === 'SUBLIDER') {
-      return users.filter(u => u.id === currentUser.parentLeaderId);
-    }
-    return [];
-  }, [currentUser, users]);
-
-  // Apply filters on accessible dataset
-  const visibleSupporters = useMemo(() => {
-    return accessibleSupporters.filter(item => {
+    // Apply UI filters
+    return accessible.filter(item => {
       if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase().trim();
-        const fullName = `${item.firstName} ${item.lastName}`.toLowerCase();
-        const cedula = item.cedula.toLowerCase();
-        const phone = item.phone.toLowerCase();
-        const neighborhood = item.neighborhood.toLowerCase();
-        const station = item.pollingStationName.toLowerCase();
-        const leader = item.registeredByLeaderName.toLowerCase();
-        const subleader = (item.registeredBySubleaderName || '').toLowerCase();
-
-        const matches =
-          fullName.includes(query) ||
-          cedula.includes(query) ||
-          phone.includes(query) ||
-          neighborhood.includes(query) ||
-          station.includes(query) ||
-          leader.includes(query) ||
-          subleader.includes(query);
-
-        if (!matches) return false;
+        const q = filters.searchQuery.toLowerCase();
+        const fullName = `${item.nombres || ''} ${item.apellidos || ''}`.toLowerCase();
+        if (!fullName.includes(q) && !(item.cedula && item.cedula.includes(q))) return false;
       }
-
-      if (filters.pollingStationId && item.pollingStationId !== filters.pollingStationId) {
-        return false;
-      }
-
-      if (filters.sector && item.sector !== filters.sector) {
-        return false;
-      }
-
-      if (filters.neighborhood && item.neighborhood !== filters.neighborhood) {
-        return false;
-      }
-
-      if (filters.gender && item.gender !== filters.gender) {
-        return false;
-      }
-
-      if (filters.ageBracket && item.ageBracket !== filters.ageBracket) {
-        return false;
-      }
-
-      if (filters.leaderId && item.registeredByLeaderId !== filters.leaderId) {
-        return false;
-      }
-
-      if (filters.subleaderId && item.registeredBySubleaderId !== filters.subleaderId) {
-        return false;
-      }
-
-      if (filters.votingCommitment && item.votingCommitment !== filters.votingCommitment) {
-        return false;
-      }
-
+      if (filters.puesto_id && item.puesto_id !== filters.puesto_id) return false;
+      if (filters.comuna_localidad && item.comuna_localidad !== filters.comuna_localidad) return false;
+      if (filters.barrio && item.barrio !== filters.barrio) return false;
+      if (filters.estado && item.estado !== filters.estado) return false;
+      if (filters.lider_id && item.lider_id !== filters.lider_id) return false;
       return true;
     });
-  }, [accessibleSupporters, filters]);
+  }, [contactos, currentUser, filters, users]);
 
-  // Extract distinct sectors and neighborhoods
-  const allSectors = useMemo(() => {
-    const set = new Set<string>();
-    supporters.forEach(s => { if (s.sector) set.add(s.sector); });
-    pollingStations.forEach(ps => { if (ps.zone) set.add(ps.zone); });
-    return Array.from(set).sort();
-  }, [supporters, pollingStations]);
-
-  const allNeighborhoods = useMemo(() => {
-    const set = new Set<string>();
-    supporters.forEach(s => { if (s.neighborhood) set.add(s.neighborhood); });
-    pollingStations.forEach(ps => { if (ps.neighborhood) set.add(ps.neighborhood); });
-    return Array.from(set).sort();
-  }, [supporters, pollingStations]);
-
-  // Statistics calculation for the current scope
-  const stats: MovementStats = useMemo(() => {
-    const totalSupporters = visibleSupporters.length;
-    let totalGoal = 0;
-
-    if (currentUser?.role === 'SUPER_ADMIN') {
-      totalGoal = users.filter(u => u.role === 'LIDER_COORDINADOR').reduce((acc, l) => acc + (l.targetCount || 0), 0) || 5000;
-    } else if (currentUser?.role === 'LIDER_COORDINADOR') {
-      totalGoal = currentUser.targetCount || 800;
-    } else if (currentUser?.role === 'SUBLIDER') {
-      totalGoal = currentUser.targetCount || 250;
-    }
-
-    const byGender: { [key: string]: number } = { MASCULINO: 0, FEMENINO: 0, OTRO: 0 };
-    const byAgeBracket: { [key: string]: number } = {
-      '18-25': 0,
-      '26-35': 0,
-      '36-50': 0,
-      '51-65': 0,
-      '65+': 0,
-    };
-    const byPollingStation: { [key: string]: number } = {};
-    const bySector: { [key: string]: number } = {};
-    const byCommitment: { [key: string]: number } = {
-      CONFIRMADO: 0,
-      PENDIENTE: 0,
-      POR_CONTACTAR: 0,
-      DUDOSO: 0,
-    };
-
-    visibleSupporters.forEach(s => {
-      if (s.gender) byGender[s.gender] = (byGender[s.gender] || 0) + 1;
-      if (s.ageBracket) byAgeBracket[s.ageBracket] = (byAgeBracket[s.ageBracket] || 0) + 1;
-      if (s.pollingStationName) byPollingStation[s.pollingStationName] = (byPollingStation[s.pollingStationName] || 0) + 1;
-      if (s.sector) bySector[s.sector] = (bySector[s.sector] || 0) + 1;
-      if (s.votingCommitment) byCommitment[s.votingCommitment] = (byCommitment[s.votingCommitment] || 0) + 1;
-    });
-
-    return {
-      totalSupporters,
-      totalGoal,
-      totalLeaders: visibleLeaders.length,
-      totalSubleaders: visibleSubleaders.length,
-      totalPollingStations: Object.keys(byPollingStation).length || pollingStations.length,
-      byGender,
-      byAgeBracket,
-      byPollingStation,
-      bySector,
-      byCommitment,
-    };
-  }, [visibleSupporters, currentUser, users, visibleLeaders, visibleSubleaders, pollingStations]);
+  const visibleUsers = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.rol === 'ADMIN' || currentUser.rol === 'LIDER_PRINCIPAL') return users;
+    if (currentUser.rol === 'LIDER_PRINCIPAL_INVITADO') return users.filter(u => u.id === currentUser.id || u.lider_principal_id === currentUser.id);
+    return users.filter(u => u.id === currentUser.id);
+  }, [users, currentUser]);
 
   return (
     <AppContext.Provider
       value={{
         currentUser,
         users,
-        supporters,
+        contactos,
         pollingStations,
+        actividades,
+        asignaciones,
         filters,
+        isLoading,
         login,
-        logout,
-        switchUser,
         registerUser,
+        updateUserStatus,
         updateUser,
         deleteUser,
-        addSupporter,
-        updateSupporter,
-        deleteSupporter,
-        bulkAddSupporters,
+        logout,
+        setFilters,
+        resetFilters,
+        visibleContactos,
+        visibleUsers,
+        fetchData,
+        addContacto,
+        updateContacto,
+        deleteContacto,
+        addActividad,
+        updateActividad,
+        deleteActividad,
         addPollingStation,
         updatePollingStation,
         deletePollingStation,
-        setFilters,
-        resetFilters,
-        toggleWhatsappContacted,
-        toggleVotedStatus,
-        checkCedulaExists,
-        resetToDemoData,
-        visibleSupporters,
-        accessibleSupporters,
-        visibleLeaders,
-        visibleSubleaders,
-        stats,
-        allSectors,
-        allNeighborhoods,
       }}
     >
       {children}
@@ -525,8 +399,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };

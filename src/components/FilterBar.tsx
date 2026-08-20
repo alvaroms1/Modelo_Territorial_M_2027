@@ -220,7 +220,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ compact = false }) => {
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-neutral-400 flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-            <span>Compromiso Voto</span>
+            <span>Rol Asignado</span>
           </label>
           <select
             value={filters.votingCommitment}

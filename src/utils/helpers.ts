@@ -8,6 +8,21 @@ export function getAgeBracket(age: number): AgeBracket {
   return '65+';
 }
 
+export function normalizeText(text: string = ''): string {
+  return String(text)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+export function smartSearch(targetFields: (string | number | undefined | null)[], query: string): boolean {
+  if (!query || !query.trim()) return true;
+  const normalizedQueryWords = normalizeText(query).split(/\s+/).filter(Boolean);
+  const combinedTarget = normalizeText(targetFields.filter(f => f !== null && f !== undefined).join(' '));
+  return normalizedQueryWords.every(word => combinedTarget.includes(word));
+}
+
 export function formatCedula(cedula: string): string {
   // Format numbers with thousand separators
   const clean = cedula.replace(/\D/g, '');

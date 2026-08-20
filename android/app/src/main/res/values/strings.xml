@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Modelo Territorial Mendozismo</string>
+    <string name="title_activity_main">Modelo Territorial Mendozismo</string>
+    <string name="package_name">com.mendozismo.app</string>
+    <string name="custom_url_scheme">com.mendozismo.app</string>
+</resources>

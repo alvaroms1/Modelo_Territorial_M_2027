@@ -1,452 +1,457 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { UserRole, UserAccount } from '../types';
 import {
+  ShieldAlert,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Users,
   GitFork,
+  ChevronRight,
   UserPlus,
   Shield,
   Phone,
-  Mail,
-  MapPin,
-  Vote,
-  Target,
-  ChevronRight,
-  MessageCircle,
-  Edit2,
-  Trash2,
-  CheckCircle2,
-  Layers,
-  Sparkles,
+  UserCheck,
+  Search
 } from 'lucide-react';
-import { getRoleBadge, formatCedula, generateWhatsappLink, getInitials } from '../utils/helpers';
-import { UserAccount, UserRole } from '../types';
+import { smartSearch } from '../utils/helpers';
 
 export const LeadersManagement: React.FC = () => {
-  const {
-    users,
-    supporters,
-    currentUser,
-    registerUser,
-    updateUser,
-    deleteUser,
-    pollingStations,
-  } = useApp();
+  const { visibleUsers, updateUser, deleteUser, currentUser, visibleContactos, updateContacto, deleteContacto } = useApp();
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [leaderSearch, setLeaderSearch] = useState('');
+  
+  // Pending approvals state: stores selected role & parent leader for each pending user
+  const [pendingRoles, setPendingRoles] = useState<{ [userId: string]: { rol: UserRole; lider_principal_id?: string } }>({});
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+  const isAdmin = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'LIDER_PRINCIPAL';
+  const isLiderPrincipal = currentUser?.rol === 'LIDER_PRINCIPAL';
+  const isPrincipalInvitado = currentUser?.rol === 'LIDER_PRINCIPAL_INVITADO';
 
-  // Form State
-  const [formName, setFormName] = useState('');
-  const [formCedula, setFormCedula] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formEmail, setFormEmail] = useState('');
-  const [formRole, setFormRole] = useState<UserRole>('SUBLIDER');
-  const [formSector, setFormSector] = useState('');
-  const [formParentLeaderId, setFormParentLeaderId] = useState('');
-  const [formStationId, setFormStationId] = useState('');
-  const [formTarget, setFormTarget] = useState(200);
-  const [formError, setFormError] = useState('');
+  // Filter pending vs active
+  const pendingUsers = isAdmin ? visibleUsers.filter(u => u.estado === 'EN_PAUSA' || u.estado === 'EN_FORMACION') : [];
+  
+  // Active users excluding admin
+  const allActiveNonAdmin = visibleUsers.filter(u => u.estado === 'ACTIVO' && u.rol !== 'ADMIN');
+  
+  // Leaders who can have sublideres under them (LIDER_PRINCIPAL, LIDER_PRINCIPAL_INVITADO, LIDER)
+  const principalLeaders = allActiveNonAdmin.filter(u => u.rol === 'LIDER_PRINCIPAL' || u.rol === 'LIDER_PRINCIPAL_INVITADO' || u.rol === 'LIDER');
+  
+  // All sublíderes are now fetched from Contactos (rol === 'SUBLIDER')
+  const allSublideres = visibleContactos.filter(c => c.rol === 'SUBLIDER').map(c => ({
+    id: c.id,
+    nombre_completo: `${c.nombres} ${c.apellidos || ''}`.trim(),
+    cedula: c.cedula,
+    telefono: c.telefono,
+    lider_principal_id: c.lider_id, // Map for compatibility with existing UI
+    isContacto: true
+  }));
+  
+  // Subleaders not linked to any active leader
+  const unassignedSublideres = allSublideres.filter(
+    s => !s.lider_principal_id || !principalLeaders.some(p => p.id === s.lider_principal_id)
+  );
 
-  const openAddModal = (roleToPreselect: UserRole = 'SUBLIDER', parentId: string = '') => {
-    setEditingUser(null);
-    setFormName('');
-    setFormCedula('');
-    setFormPhone('');
-    setFormEmail('');
-    setFormRole(currentUser?.role === 'LIDER_COORDINADOR' ? 'SUBLIDER' : roleToPreselect);
-    setFormSector(currentUser?.sector || '');
-    setFormParentLeaderId(parentId || (currentUser?.role === 'LIDER_COORDINADOR' ? currentUser.id : ''));
-    setFormStationId(currentUser?.assignedPollingStationId || pollingStations[0]?.id || '');
-    setFormTarget(roleToPreselect === 'LIDER_COORDINADOR' ? 800 : 250);
-    setFormError('');
-    setShowAddModal(true);
+  const getPendingRoleData = (userId: string) => {
+    return pendingRoles[userId] || { rol: 'LIDER_PRINCIPAL', lider_principal_id: '' };
   };
 
-  const openEditModal = (user: UserAccount) => {
-    setEditingUser(user);
-    setFormName(user.fullName);
-    setFormCedula(user.cedula);
-    setFormPhone(user.phone);
-    setFormEmail(user.email);
-    setFormRole(user.role);
-    setFormSector(user.sector);
-    setFormParentLeaderId(user.parentLeaderId || '');
-    setFormStationId(user.assignedPollingStationId || '');
-    setFormTarget(user.targetCount || 200);
-    setFormError('');
-    setShowAddModal(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-
-    if (!formName.trim() || !formCedula.trim() || !formPhone.trim()) {
-      setFormError('Nombre, Cédula y Teléfono Móvil (WhatsApp) son obligatorios.');
-      return;
-    }
-
-    const cleanCedula = formCedula.replace(/\D/g, '');
-    const parentLeader = users.find(u => u.id === formParentLeaderId);
-    const station = pollingStations.find(ps => ps.id === formStationId);
-
-    if (editingUser) {
-      updateUser({
-        ...editingUser,
-        cedula: cleanCedula,
-        fullName: formName.trim(),
-        role: formRole,
-        phone: formPhone.trim(),
-        email: formEmail.trim() || `${cleanCedula}@movimiento.org`,
-        sector: formSector.trim() || 'Sector General',
-        parentLeaderId: formRole === 'SUBLIDER' ? formParentLeaderId : undefined,
-        parentLeaderName: formRole === 'SUBLIDER' ? parentLeader?.fullName : undefined,
-        assignedPollingStationId: formStationId || undefined,
-        assignedPollingStationName: station?.name || undefined,
-        targetCount: Number(formTarget) || 200,
-      });
-      setShowAddModal(false);
-    } else {
-      // Check if cedula exists
-      const exists = users.find(u => u.cedula.replace(/\D/g, '') === cleanCedula);
-      if (exists) {
-        setFormError(`La cédula ${formCedula} ya pertenece a ${exists.fullName}.`);
-        return;
+  const handlePendingRoleChange = (userId: string, rol: UserRole) => {
+    setPendingRoles(prev => ({
+      ...prev,
+      [userId]: {
+        ...getPendingRoleData(userId),
+        rol,
+        lider_principal_id: (rol === 'SUBLIDER' || rol === 'LIDER') ? prev[userId]?.lider_principal_id || principalLeaders[0]?.id : undefined
       }
+    }));
+  };
 
-      registerUser({
-        cedula: cleanCedula,
-        fullName: formName.trim(),
-        role: formRole,
-        phone: formPhone.trim(),
-        email: formEmail.trim() || `${cleanCedula}@movimiento.org`,
-        sector: formSector.trim() || 'Sector General',
-        parentLeaderId: formRole === 'SUBLIDER' ? formParentLeaderId : undefined,
-        parentLeaderName: formRole === 'SUBLIDER' ? parentLeader?.fullName : undefined,
-        assignedPollingStationId: formStationId || undefined,
-        assignedPollingStationName: station?.name || undefined,
-        targetCount: Number(formTarget) || 200,
+  const handlePendingParentLeaderChange = (userId: string, lider_principal_id: string) => {
+    setPendingRoles(prev => ({
+      ...prev,
+      [userId]: {
+        ...getPendingRoleData(userId),
+        lider_principal_id
+      }
+    }));
+  };
+
+  const handleApprove = async (userId: string) => {
+    setProcessingId(userId);
+    const roleData = getPendingRoleData(userId);
+    
+    await updateUser(userId, {
+      estado: 'ACTIVO',
+      rol: roleData.rol,
+      lider_principal_id: (roleData.rol === 'SUBLIDER' || roleData.rol === 'LIDER') ? roleData.lider_principal_id : undefined
+    });
+    
+    setProcessingId(null);
+  };
+
+  const handleRoleChangeActive = async (userId: string, newRole: UserRole) => {
+    setProcessingId(userId);
+    await updateUser(userId, {
+      rol: newRole,
+      lider_principal_id: (newRole === 'SUBLIDER' || newRole === 'LIDER') ? principalLeaders[0]?.id : undefined
+    });
+    setProcessingId(null);
+  };
+
+  const handleParentLeaderChangeActive = async (id: string, parentId: string, isContacto: boolean = false) => {
+    setProcessingId(id);
+    if (isContacto) {
+      await updateContacto(id, {
+        lider_id: parentId || undefined
       });
-      setShowAddModal(false);
+    } else {
+      await updateUser(id, {
+        lider_principal_id: parentId || undefined
+      });
+    }
+    setProcessingId(null);
+  };
+
+  const handleReject = async (id: string, isContacto: boolean = false) => {
+    if (confirm('¿Está seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
+      setProcessingId(id);
+      if (isContacto) {
+        await deleteContacto(id);
+      } else {
+        await deleteUser(id);
+      }
+      setProcessingId(null);
     }
   };
 
-  const mainLeaders = users.filter(u => u.role === 'LIDER_COORDINADOR');
-  const superAdmins = users.filter(u => u.role === 'SUPER_ADMIN');
+  const formatRoleName = (role: UserRole) => {
+    switch (role) {
+      case 'ADMIN': return 'Administrador';
+      case 'LIDER_PRINCIPAL': return 'Líder Principal';
+      case 'LIDER_PRINCIPAL_INVITADO': return 'Líder Principal Invitado';
+      case 'LIDER': return 'Líder';
+      case 'SUBLIDER': return 'Sublíder';
+      default: return role;
+    }
+  };
+
+  const getRoleBadgeStyle = (role: UserRole) => {
+    switch (role) {
+      case 'ADMIN': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      case 'LIDER_PRINCIPAL': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+      case 'LIDER_PRINCIPAL_INVITADO': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      case 'LIDER': return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+      case 'SUBLIDER': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      default: return 'bg-neutral-800 text-neutral-300 border-neutral-700';
+    }
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-neutral-100">
-              Estructura Territorial & Red de Líderes
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {users.length} miembros activos
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
-            Jerarquía piramidal de mando: Super Admin → Líderes de Zona → Sublíderes de Base
-          </p>
-        </div>
-
-        {/* Action button */}
-        {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'LIDER_COORDINADOR') && (
-          <div className="flex items-center gap-2">
-            {currentUser.role === 'SUPER_ADMIN' && (
-              <button
-                type="button"
-                onClick={() => openAddModal('LIDER_COORDINADOR')}
-                className="px-3.5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>+ Nuevo Líder de Zona</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              id="btn-add-subleader"
-              onClick={() => openAddModal('SUBLIDER')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>+ Nuevo Sublíder</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Role Hierarchy Explanation Box */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 text-xs">
-        <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-900/30 space-y-1">
-          <div className="font-bold text-rose-300 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-            Rol 1: Super Admin / Director
-          </div>
-          <p className="text-neutral-400 text-[11px]">
-            Visión total de la campaña, exporta e importa bases de datos completas, administra todos los líderes y puestos.
-          </p>
-        </div>
-
-        <div className="p-3 rounded-xl bg-indigo-950/20 border border-indigo-900/30 space-y-1">
-          <div className="font-bold text-indigo-300 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-            Rol 2: Líder Coordinador
-          </div>
-          <p className="text-neutral-400 text-[11px]">
-            Coordina una Comuna o Sector completo. Dirige a sus sublíderes y monitorea los puestos de votación de su área.
-          </p>
-        </div>
-
-        <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30 space-y-1">
-          <div className="font-bold text-emerald-300 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            Rol 3: Sublíder de Base
-          </div>
-          <p className="text-neutral-400 text-[11px]">
-            Trabajo territorial puerta a puerta. Registra directamente a sus simpatizantes y confirma mesas electorales.
-          </p>
-        </div>
-      </div>
-
-      {/* Hierarchy Cards: Super Admin -> Leaders -> Subleaders */}
-      <div className="space-y-6">
-        {/* Super Admins Section */}
-        {superAdmins.map((admin) => (
-          <div
-            key={admin.id}
-            className="p-5 rounded-3xl bg-neutral-900/90 border border-rose-900/40 shadow-sm space-y-4"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 flex items-center justify-center text-white font-bold text-base shadow-md shadow-rose-600/30">
-                  {getInitials(admin.fullName)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-neutral-100">{admin.fullName}</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                      Super Admin
-                    </span>
-                  </div>
-                  <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-3 mt-0.5">
-                    <span>C.C. {formatCedula(admin.cedula)}</span>
-                    <span>•</span>
-                    <a
-                      href={generateWhatsappLink(admin.phone, 'Hola Director, reporte del estado de la campaña.')}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                    >
-                      <Phone className="w-3 h-3" />
-                      <span>{admin.phone}</span>
-                    </a>
-                    <span>•</span>
-                    <span>{admin.email}</span>
-                  </div>
-                </div>
+    <div className="space-y-8 animate-in fade-in duration-300">
+      
+      {/* Pending Approvals Section (ADMIN only) */}
+      {isAdmin && pendingUsers.length > 0 && (
+        <div className="bg-gradient-to-b from-rose-950/30 to-neutral-900/60 rounded-3xl p-6 border border-rose-500/20 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-rose-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-
-              <div className="text-right">
-                <div className="text-xs text-neutral-400">Meta Global Movimiento</div>
-                <div className="text-lg font-bold text-neutral-100">
-                  {supporters.length} / {admin.targetCount || 5000} Votos
-                </div>
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  Líderes Pendientes de Aprobación
+                  <span className="px-2 py-0.5 rounded-full text-xs font-black bg-rose-500 text-white">
+                    {pendingUsers.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Seleccione el rol territorial correspondiente antes de autorizar el acceso
+                </p>
               </div>
             </div>
           </div>
-        ))}
 
-        {/* Líderes Coordinadores & their Sublíderes */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-bold text-neutral-300 uppercase tracking-wider px-1 flex items-center gap-2">
-            <GitFork className="w-4 h-4 text-indigo-400" />
-            <span>Líderes de Zona y sus Redes de Sublíderes</span>
-          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-neutral-300">
+              <thead className="text-xs uppercase bg-neutral-950/60 text-neutral-400">
+                <tr>
+                  <th className="px-4 py-3 rounded-l-xl">Nombre</th>
+                  <th className="px-4 py-3">Cédula</th>
+                  <th className="px-4 py-3">Teléfono</th>
+                  <th className="px-4 py-3 min-w-[240px]">Asignar Rol</th>
+                  <th className="px-4 py-3 text-right rounded-r-xl">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rose-500/10">
+                {pendingUsers.map((user) => {
+                  const roleData = getPendingRoleData(user.id);
+                  const isSubliderOrLider = roleData.rol === 'SUBLIDER' || roleData.rol === 'LIDER';
 
+                  return (
+                    <tr key={user.id} className="hover:bg-rose-500/5 transition">
+                      <td className="px-4 py-4 font-semibold text-white">
+                        {user.nombre_completo}
+                      </td>
+                      <td className="px-4 py-4 font-mono text-xs text-neutral-300">
+                        {user.cedula}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-neutral-400">
+                        {user.telefono || 'Sin teléfono'}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="space-y-2">
+                          <select
+                            value={roleData.rol}
+                            onChange={(e) => handlePendingRoleChange(user.id, e.target.value as UserRole)}
+                            className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-2 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
+                          >
+                            <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                            <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
+                            <option value="LIDER">Líder</option>
+                            <option value="SUBLIDER">Sublíder</option>
+                            <option value="ADMIN">Administrador</option>
+                          </select>
+
+                          {isSubliderOrLider && (
+                            <select
+                              value={roleData.lider_principal_id || ''}
+                              onChange={(e) => handlePendingParentLeaderChange(user.id, e.target.value)}
+                              className="w-full bg-neutral-900 border border-indigo-500/40 text-indigo-300 text-xs px-3 py-1.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                            >
+                              <option value="">-- Vincular a Líder Principal (Opcional) --</option>
+                              {principalLeaders.map(lp => (
+                                <option key={lp.id} value={lp.id}>
+                                  Líder: {lp.nombre_completo} ({lp.cedula})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        {processingId === user.id ? (
+                          <Loader2 className="w-5 h-5 animate-spin mx-auto text-rose-400" />
+                        ) : (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleApprove(user.id)}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+                              title="Aprobar acceso con rol asignado"
+                            >
+                              <CheckCircle className="w-4 h-4 text-emerald-400" />
+                              <span>Aprobar</span>
+                            </button>
+                            <button
+                              onClick={() => handleReject(user.id)}
+                              className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl transition cursor-pointer"
+                              title="Rechazar y eliminar registro"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Hierarchical Leaders Structure Section */}
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <GitFork className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">Estructura Territorial de Líderes</h2>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Relación jerárquica: Líderes territoriales y sus Sublíderes asignados
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar líder o sublíder..."
+                value={leaderSearch}
+                onChange={e => setLeaderSearch(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <span className="text-xs font-medium text-neutral-400 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full whitespace-nowrap">
+              Líderes: <strong className="text-indigo-400">{principalLeaders.length}</strong> | Sublíderes: <strong className="text-emerald-400">{allSublideres.length}</strong>
+            </span>
+          </div>
+        </div>
+
+        {principalLeaders.length === 0 && unassignedSublideres.length === 0 ? (
+          <div className="bg-neutral-900/80 rounded-3xl p-12 text-center border border-neutral-800">
+            <Users className="w-12 h-12 text-neutral-600 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-neutral-300">No hay líderes activos registrados</h3>
+            <p className="text-xs text-neutral-500 mt-1">Los líderes aprobados aparecerán organizados en este panel.</p>
+          </div>
+        ) : (
           <div className="space-y-4">
-            {mainLeaders.map((leader) => {
-              const subleaders = users.filter(u => u.parentLeaderId === leader.id);
-              const subleaderIds = new Set(subleaders.map(u => u.id));
-              const leaderVoters = supporters.filter(s =>
-                s.registeredByLeaderId === leader.id || (s.registeredBySubleaderId && subleaderIds.has(s.registeredBySubleaderId))
-              );
-              const directVoters = supporters.filter(s => s.registeredByLeaderId === leader.id && !s.registeredBySubleaderId);
-              const goal = leader.targetCount || 800;
-              const pct = Math.min(100, Math.round((leaderVoters.length / goal) * 100));
+            {/* List of each Leader Card with its assigned Sublideres */}
+            {principalLeaders
+              .filter(leader => {
+                if (!leaderSearch) return true;
+                const assignedSubs = allSublideres.filter(s => s.lider_principal_id === leader.id);
+                const subNames = assignedSubs.map(s => s.nombre_completo).join(' ');
+                return smartSearch([
+                  leader.nombre_completo,
+                  leader.cedula,
+                  leader.telefono,
+                  leader.barrio_residencia,
+                  leader.comuna_localidad,
+                  leader.rol,
+                  subNames
+                ], leaderSearch);
+              })
+              .map((leader) => {
+              const assignedSublideres = allSublideres.filter(s => s.lider_principal_id === leader.id);
+              const canEditThisLeader = isAdmin || (isLiderPrincipal && (leader.rol === 'SUBLIDER' || leader.rol === 'LIDER'));
 
               return (
-                <div
-                  key={leader.id}
-                  className="bg-neutral-900/90 border border-neutral-800 rounded-3xl p-5 space-y-4 shadow-sm"
-                >
-                  {/* Leader Header */}
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-neutral-800/80">
+                <div key={leader.id} className="bg-neutral-900/80 backdrop-blur-md rounded-3xl border border-neutral-800 overflow-hidden shadow-xl">
+                  
+                  {/* Leader Header Row */}
+                  <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-950/40 border-b border-neutral-800/80">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-600/30 shrink-0">
-                        {getInitials(leader.fullName)}
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-800 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-600/20 text-sm shrink-0">
+                        {leader.nombre_completo.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm sm:text-base font-bold text-neutral-100">
-                            {leader.fullName}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-bold text-white">
+                            {leader.nombre_completo}
                           </h3>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
-                            Líder de Zona
+                          <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${getRoleBadgeStyle(leader.rol)}`}>
+                            {formatRoleName(leader.rol)}
                           </span>
                         </div>
-                        <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-2 mt-0.5">
-                          <span className="text-neutral-300 font-medium">{leader.sector}</span>
-                          <span>•</span>
-                          <span>C.C. {formatCedula(leader.cedula)}</span>
-                          <span>•</span>
-                          <a
-                            href={generateWhatsappLink(leader.phone, `Hola ${leader.fullName}, ¿cómo va la coordinación en ${leader.sector}?`)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium"
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            <span>{leader.phone}</span>
-                          </a>
+                        <div className="flex items-center gap-4 text-xs text-neutral-400 mt-1 flex-wrap">
+                          <span>Cédula: <strong className="text-neutral-200">{leader.cedula}</strong></span>
+                          {leader.telefono && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-emerald-400" /> {leader.telefono}
+                            </span>
+                          )}
+                          <span className="text-indigo-400 font-semibold">
+                            {assignedSublideres.length} {assignedSublideres.length === 1 ? 'Sublíder asignado' : 'Sublíderes asignados'}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 self-end lg:self-auto">
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-neutral-200">
-                          {leaderVoters.length} / {goal} Votantes ({pct}%)
-                        </div>
-                        <div className="text-[11px] text-neutral-500">
-                          {subleaders.length} Sublíderes • {directVoters.length} Directos
-                        </div>
-                      </div>
+                    {/* Role edit / Actions for Leader */}
+                    <div className="flex items-center gap-3 self-end md:self-auto">
+                      {isAdmin && (
+                        <select
+                          value={leader.rol}
+                          disabled={processingId === leader.id}
+                          onChange={(e) => handleRoleChangeActive(leader.id, e.target.value as UserRole)}
+                          className="bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-1.5 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
+                        >
+                          <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                          <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
+                          <option value="LIDER">Líder</option>
+                          <option value="SUBLIDER">Sublíder</option>
+                          <option value="ADMIN">Administrador</option>
+                        </select>
+                      )}
 
-                      {currentUser?.role === 'SUPER_ADMIN' && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(leader)}
-                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
-                            title="Editar Líder"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteUser(leader.id)}
-                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-rose-900/60 text-neutral-400 hover:text-rose-400"
-                            title="Eliminar Líder"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleReject(leader.id)}
+                          disabled={processingId === leader.id}
+                          className="text-xs text-rose-400 hover:text-rose-300 font-bold px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 transition cursor-pointer"
+                        >
+                          {processingId === leader.id ? '...' : 'Eliminar'}
+                        </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Subleaders Grid belonging to this leader */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between text-xs text-neutral-400 px-1">
-                      <span className="font-semibold uppercase tracking-wider text-[11px]">
-                        Sublíderes Asignados ({subleaders.length}):
+                  {/* Sublíderes Under This Leader */}
+                  <div className="p-4 sm:p-5 bg-neutral-900/40">
+                    <div className="mb-3 flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <GitFork className="w-3.5 h-3.5 text-emerald-400 rotate-90" />
+                        Sublíderes a cargo de {leader.nombre_completo.split(' ')[0]}:
                       </span>
-
-                      {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.id === leader.id) && (
-                        <button
-                          type="button"
-                          onClick={() => openAddModal('SUBLIDER', leader.id)}
-                          className="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 text-[11px]"
-                        >
-                          <span>+ Agregar Sublíder a {leader.fullName.split(' ')[0]}</span>
-                        </button>
-                      )}
                     </div>
 
-                    {subleaders.length === 0 ? (
-                      <div className="p-4 text-center rounded-2xl bg-neutral-950/60 border border-neutral-800/80 text-xs text-neutral-500">
-                        Este líder no tiene sublíderes asignados aún.
+                    {assignedSublideres.length === 0 ? (
+                      <div className="p-4 rounded-2xl bg-neutral-950/30 border border-neutral-800/50 text-xs text-neutral-500 flex items-center justify-between">
+                        <span>Sin sublíderes asignados a este líder actualmente.</span>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {subleaders.map((sub) => {
-                          const subVoters = supporters.filter(s => s.registeredBySubleaderId === sub.id);
-                          const subGoal = sub.targetCount || 200;
-                          const subPct = Math.min(100, Math.round((subVoters.length / subGoal) * 100));
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {assignedSublideres.map((sublider) => {
+                          const canEditSublider = isAdmin || isLiderPrincipal;
 
                           return (
                             <div
-                              key={sub.id}
-                              className="p-3.5 rounded-2xl bg-neutral-950/80 border border-neutral-800/80 space-y-2.5 hover:border-neutral-700 transition"
+                              key={sublider.id}
+                              className="p-3.5 rounded-2xl bg-neutral-950/60 border border-neutral-800/80 flex items-start justify-between gap-3 hover:border-neutral-700 transition"
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-neutral-100 text-xs truncate">
-                                    {sub.fullName}
-                                  </div>
-                                  <div className="text-[11px] text-neutral-400 truncate">
-                                    {sub.sector}
-                                  </div>
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                                  {sublider.nombre_completo.substring(0, 2).toUpperCase()}
                                 </div>
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                                  {subVoters.length} votos
-                                </span>
-                              </div>
-
-                              <div className="text-[11px] text-neutral-400 space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <span>C.C. {formatCedula(sub.cedula)}</span>
-                                  <a
-                                    href={generateWhatsappLink(sub.phone, `Hola ${sub.fullName}, ¿cómo avanza el registro de personas en ${sub.sector}?`)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium"
-                                  >
-                                    <MessageCircle className="w-3 h-3" />
-                                    <span>{sub.phone}</span>
-                                  </a>
-                                </div>
-
-                                {sub.assignedPollingStationName && (
-                                  <div className="text-[10px] text-neutral-500 truncate flex items-center gap-1">
-                                    <Vote className="w-3 h-3 text-indigo-400 shrink-0" />
-                                    <span className="truncate">{sub.assignedPollingStationName}</span>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="text-xs font-bold text-white">
+                                      {sublider.nombre_completo}
+                                    </h4>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      Sublíder
+                                    </span>
                                   </div>
-                                )}
-                              </div>
-
-                              {/* Goal Progress */}
-                              <div className="space-y-1 pt-1">
-                                <div className="flex justify-between text-[10px] text-neutral-400">
-                                  <span>Meta: {subGoal}</span>
-                                  <span>{subPct}%</span>
-                                </div>
-                                <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-emerald-500 rounded-full"
-                                    style={{ width: `${subPct}%` }}
-                                  ></div>
+                                  <div className="flex items-center gap-3 text-[11px] text-neutral-400 mt-1">
+                                    <span>CC: <strong className="text-neutral-300">{sublider.cedula}</strong></span>
+                                    {sublider.telefono && (
+                                      <span>Tel: <strong className="text-neutral-300">{sublider.telefono}</strong></span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Edit / Delete actions */}
-                              {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.id === leader.id) && (
-                                <div className="pt-2 border-t border-neutral-800/80 flex items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditModal(sub)}
-                                    className="text-[10px] text-neutral-400 hover:text-neutral-200 px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800"
+                              {/* Actions on Sublider */}
+                              {canEditSublider && (
+                                <div className="flex flex-col items-end gap-1.5">
+                                  <select
+                                    value={sublider.lider_principal_id || ''}
+                                    onChange={(e) => handleParentLeaderChangeActive(sublider.id, e.target.value, true)}
+                                    className="bg-neutral-900 border border-neutral-700 text-neutral-300 text-[10px] px-2 py-1 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer max-w-[140px]"
+                                    title="Reasignar a otro Líder"
                                   >
-                                    Editar
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => deleteUser(sub.id)}
-                                    className="text-[10px] text-rose-400 hover:text-rose-300 px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800"
-                                  >
-                                    Eliminar
-                                  </button>
+                                    {principalLeaders.map(lp => (
+                                      <option key={lp.id} value={lp.id}>
+                                        {lp.nombre_completo}
+                                      </option>
+                                    ))}
+                                    <option value="">(Desvincular)</option>
+                                  </select>
+
+                                  {isAdmin && (
+                                    <button
+                                      onClick={() => handleReject(sublider.id, true)}
+                                      className="text-[10px] text-rose-400 hover:text-rose-300 transition cursor-pointer"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -458,167 +463,41 @@ export const LeadersManagement: React.FC = () => {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </div>
 
-      {/* Add / Edit User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div
-            className="bg-neutral-900 border border-neutral-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-              <h3 className="text-base font-bold text-neutral-100">
-                {editingUser ? 'Editar Miembro de Estructura' : 'Registrar Nuevo Líder o Sublíder'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="text-neutral-400 hover:text-neutral-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            {formError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
-                {formError}
+            {/* Unassigned Sublideres Section (if any) */}
+            {unassignedSublideres.length > 0 && (
+              <div className="bg-amber-950/20 rounded-3xl p-5 border border-amber-500/20 shadow-xl">
+                <h3 className="text-sm font-bold text-amber-300 mb-3 flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  Sublíderes sin Líder Asignado ({unassignedSublideres.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {unassignedSublideres.map((sublider) => (
+                    <div key={sublider.id} className="p-3.5 rounded-2xl bg-neutral-950/60 border border-amber-500/20 flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">{sublider.nombre_completo}</h4>
+                        <p className="text-[11px] text-neutral-400">CC: {sublider.cedula} | Tel: {sublider.telefono || 'N/A'}</p>
+                      </div>
+                      <select
+                        value={sublider.lider_principal_id || ''}
+                        onChange={(e) => handleParentLeaderChangeActive(sublider.id, e.target.value, true)}
+                        className="bg-neutral-900 border border-amber-500/40 text-amber-300 text-xs px-2.5 py-1.5 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
+                      >
+                        <option value="">-- Asignar Líder --</option>
+                        {principalLeaders.map(lp => (
+                          <option key={lp.id} value={lp.id}>
+                            {lp.nombre_completo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-
-            <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-              <div className="space-y-1">
-                <label className="text-neutral-300 font-semibold">Nombre Completo *</label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ej: Claudia Marcela Gómez"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Cédula *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formCedula}
-                    onChange={(e) => setFormCedula(e.target.value)}
-                    placeholder="Sin puntos"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">WhatsApp Móvil *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formPhone}
-                    onChange={(e) => setFormPhone(e.target.value)}
-                    placeholder="3001234567"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Rol Asignado</label>
-                  <select
-                    value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as UserRole)}
-                    disabled={currentUser?.role === 'LIDER_COORDINADOR'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  >
-                    <option value="SUBLIDER">Sublíder de Base</option>
-                    <option value="LIDER_COORDINADOR">Líder de Zona / Comuna</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Meta de Votos</label>
-                  <input
-                    type="number"
-                    value={formTarget}
-                    onChange={(e) => setFormTarget(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  />
-                </div>
-              </div>
-
-              {formRole === 'SUBLIDER' && (
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Líder Principal Asignado</label>
-                  <select
-                    value={formParentLeaderId}
-                    onChange={(e) => setFormParentLeaderId(e.target.value)}
-                    disabled={currentUser?.role === 'LIDER_COORDINADOR'}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  >
-                    <option value="">Seleccione el Líder</option>
-                    {mainLeaders.map((ldr) => (
-                      <option key={ldr.id} value={ldr.id}>
-                        {ldr.fullName} ({ldr.sector})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Sector / Comuna</label>
-                  <input
-                    type="text"
-                    value={formSector}
-                    onChange={(e) => setFormSector(e.target.value)}
-                    placeholder="Ej: Comuna 1 Norte"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-neutral-300 font-semibold">Puesto de Votación</label>
-                  <select
-                    value={formStationId}
-                    onChange={(e) => setFormStationId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  >
-                    <option value="">Seleccionar Puesto</option>
-                    {pollingStations.map((ps) => (
-                      <option key={ps.id} value={ps.id}>
-                        {ps.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-neutral-800 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

@@ -3,37 +3,42 @@ import { AppProvider, useApp } from './context/AppContext';
 import { AuthScreen } from './components/AuthScreen';
 import { Navigation, NavTab } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
-import { SupportersList } from './components/SupportersList';
+import { ContactosList } from './components/ContactosList';
 import { LeadersManagement } from './components/LeadersManagement';
 import { PollingStationsView } from './components/PollingStationsView';
-import { WhatsappMessaging } from './components/WhatsappMessaging';
-import { ExcelManager } from './components/ExcelManager';
-import { AddSupporterModal } from './components/AddSupporterModal';
-import { Supporter } from './types';
+import { AddContactoModal } from './components/AddContactoModal';
+import { Contacto } from './types';
+
+import { ExcelCenter } from './components/ExcelCenter';
+import { WhatsAppCenter } from './components/WhatsAppCenter';
 
 const MainContent: React.FC = () => {
-  const { currentUser } = useApp();
+  const { currentUser, isLoading } = useApp();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [supporterToEdit, setSupporterToEdit] = useState<Supporter | null>(null);
+  const [contactoToEdit, setContactoToEdit] = useState<Contacto | null>(null);
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center font-sans">Cargando...</div>;
+  }
 
   if (!currentUser) {
     return <AuthScreen />;
   }
 
   const handleOpenAddModal = () => {
-    setSupporterToEdit(null);
+    setContactoToEdit(null);
     setIsAddModalOpen(true);
   };
 
-  const handleEditSupporter = (supporter: Supporter) => {
-    setSupporterToEdit(supporter);
+  const handleEditContacto = (contacto: Contacto) => {
+    setContactoToEdit(contacto);
     setIsAddModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
-    setSupporterToEdit(null);
+    setContactoToEdit(null);
   };
 
   return (
@@ -42,7 +47,7 @@ const MainContent: React.FC = () => {
       <Navigation
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenAddSupporterModal={handleOpenAddModal}
+        onOpenAddContactoModal={handleOpenAddModal}
       />
 
       {/* Main Tab Content */}
@@ -50,26 +55,26 @@ const MainContent: React.FC = () => {
         {activeTab === 'dashboard' && (
           <Dashboard
             setActiveTab={setActiveTab}
-            onOpenAddSupporterModal={handleOpenAddModal}
+            onOpenAddContactoModal={handleOpenAddModal}
           />
         )}
-        {activeTab === 'supporters' && (
-          <SupportersList
+        {activeTab === 'contactos' && (
+          <ContactosList
             onOpenAddModal={handleOpenAddModal}
-            onEditSupporter={handleEditSupporter}
+            onEditContacto={handleEditContacto}
           />
         )}
         {activeTab === 'leaders' && <LeadersManagement />}
         {activeTab === 'polling-stations' && <PollingStationsView />}
-        {activeTab === 'whatsapp' && <WhatsappMessaging />}
-        {activeTab === 'excel' && <ExcelManager />}
+        {activeTab === 'whatsapp' && <WhatsAppCenter />}
+        {activeTab === 'excel' && <ExcelCenter />}
       </main>
 
-      {/* Add / Edit Supporter Modal */}
-      <AddSupporterModal
+      {/* Add / Edit Contacto Modal */}
+      <AddContactoModal
         isOpen={isAddModalOpen}
         onClose={handleCloseModal}
-        supporterToEdit={supporterToEdit}
+        contactoToEdit={contactoToEdit}
       />
     </div>
   );
