@@ -100,3 +100,23 @@ export function getCommitmentBadge(commitment: string): { label: string; bg: str
       return { label: commitment, bg: 'bg-neutral-800 text-neutral-300 border border-neutral-700', text: 'text-neutral-300', dot: 'bg-neutral-400' };
   }
 }
+
+export function formatColombianCurrency(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === '') return '';
+  const num = typeof val === 'string' ? parseInt(val.replace(/\D/g, ''), 10) : Math.round(Number(val));
+  if (isNaN(num) || num === 0) return '';
+
+  const str = num.toString();
+  if (str.length <= 6) {
+    // Under 1 million: $XXX.XXX
+    return '$' + num.toLocaleString('es-CO');
+  } else {
+    // 1 million or above: $X'XXX.XXX or $XX'XXX.XXX
+    const millionsPart = str.slice(0, str.length - 6);
+    const remainderPart = str.slice(str.length - 6);
+    const p1 = remainderPart.slice(0, 3);
+    const p2 = remainderPart.slice(3, 6);
+    return `$${millionsPart}'${p1}.${p2}`;
+  }
+}
+

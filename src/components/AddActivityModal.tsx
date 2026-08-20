@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { LOCALIDADES_CARTAGENA } from '../data/cartagenaData';
 import { TipoActividad, Actividad } from '../types';
+import { formatColombianCurrency } from '../utils/helpers';
 import {
   X,
   Calendar,
@@ -375,10 +376,14 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                   <input
                     type="number"
                     min="1"
-                    value={formData.meta_asistentes}
-                    onChange={e => setFormData({ ...formData, meta_asistentes: Number(e.target.value) })}
+                    value={formData.meta_asistentes === 0 ? '' : formData.meta_asistentes}
+                    onFocus={e => e.target.select()}
+                    onChange={e => {
+                      const v = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                      setFormData({ ...formData, meta_asistentes: v });
+                    }}
                     className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3.5 py-2 text-sm text-white font-bold focus:outline-none focus:border-indigo-500"
-                    placeholder="Ej. 25 personas"
+                    placeholder="Ej. 20"
                   />
                   <p className="text-[10px] text-neutral-500 mt-1">Número de personas / simpatizantes que llevarás o convocarás a esta actividad (Ej. 20)</p>
                 </div>
@@ -388,13 +393,17 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                     <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Costo Presupuestado ($ COP)
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    value={formData.costo_presupuestado}
-                    onChange={e => setFormData({ ...formData, costo_presupuestado: Number(e.target.value) })}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatColombianCurrency(formData.costo_presupuestado)}
+                    onFocus={e => e.target.select()}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/\D/g, '');
+                      const num = raw ? parseInt(raw, 10) : 0;
+                      setFormData({ ...formData, costo_presupuestado: num });
+                    }}
                     className="w-full bg-neutral-900 border border-emerald-500/40 rounded-xl px-3.5 py-2 text-sm text-emerald-300 font-bold focus:outline-none focus:border-emerald-500"
-                    placeholder="Ej. 150000"
+                    placeholder="$0"
                   />
                   <p className="text-[10px] text-neutral-500 mt-1">Gasto estimado (sonido, refrigerios, transporte, etc.)</p>
                 </div>
@@ -469,7 +478,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                   </div>
                   <div className="bg-neutral-900/90 rounded-xl p-2.5 border border-neutral-800 flex items-center justify-between">
                     <span className="text-[11px] text-neutral-400 font-medium">Presupuesto:</span>
-                    <strong className="text-emerald-400 text-xs">${Number(formData.costo_presupuestado || 0).toLocaleString('es-CO')} COP</strong>
+                    <strong className="text-emerald-400 text-xs">{formatColombianCurrency(formData.costo_presupuestado) || '$0'} COP</strong>
                   </div>
                 </div>
               </div>
@@ -508,11 +517,14 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                     <input
                       type="number"
                       min="0"
-                      value={formData.asistentes_reales}
-                      onChange={e => setFormData({ ...formData, asistentes_reales: Number(e.target.value) })}
+                      value={formData.asistentes_reales === 0 ? '' : formData.asistentes_reales}
+                      onFocus={e => e.target.select()}
+                      onChange={e => {
+                        const v = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                        setFormData({ ...formData, asistentes_reales: v });
+                      }}
                       className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-emerald-500"
-                      placeholder="Ej. 28"
-                      required
+                      placeholder="0"
                     />
                     <p className="text-[10px] text-neutral-500 mt-1">Meta programada: {formData.meta_asistentes} asistentes</p>
                   </div>
@@ -524,11 +536,14 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                     <input
                       type="number"
                       min="0"
-                      value={formData.nuevos_contactos_generados}
-                      onChange={e => setFormData({ ...formData, nuevos_contactos_generados: Number(e.target.value) })}
+                      value={formData.nuevos_contactos_generados === 0 ? '' : formData.nuevos_contactos_generados}
+                      onFocus={e => e.target.select()}
+                      onChange={e => {
+                        const v = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                        setFormData({ ...formData, nuevos_contactos_generados: v });
+                      }}
                       className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-sm text-indigo-300 font-bold focus:outline-none focus:border-indigo-500"
-                      placeholder="Ej. 12 simpatizantes"
-                      required
+                      placeholder="0"
                     />
                     <p className="text-[10px] text-neutral-500 mt-1">Personas que firmaron y se sumaron al movimiento</p>
                   </div>
@@ -549,18 +564,23 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                   )}
                 </div>
                 <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={formData.costo_real}
-                  onChange={e => setFormData({ ...formData, costo_real: Number(e.target.value) })}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatColombianCurrency(formData.costo_real)}
+                  onFocus={e => e.target.select()}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/\D/g, '');
+                    const num = raw ? parseInt(raw, 10) : 0;
+                    setFormData({ ...formData, costo_real: num });
+                  }}
                   className="w-full bg-neutral-900 border border-rose-500/40 rounded-xl px-3.5 py-2.5 text-base text-rose-300 font-black focus:outline-none focus:border-rose-500"
-                  placeholder="Ej. 140000"
+                  placeholder="$0"
                 />
                 <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-1">
-                  <span>Presupuesto programado: <strong className="text-white">${formData.costo_presupuestado.toLocaleString('es-CO')}</strong></span>
-                  <span>Diferencia: <strong className={`${formData.costo_real <= formData.costo_presupuestado ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    ${(formData.costo_presupuestado - formData.costo_real).toLocaleString('es-CO')}
+                  <span>Presupuesto programado: <strong className="text-white">{formatColombianCurrency(formData.costo_presupuestado) || '$0'}</strong></span>
+                  <span>Diferencia: <strong className={formData.costo_real <= formData.costo_presupuestado ? 'text-emerald-400' : 'text-rose-400'}>
+                    {formData.costo_real <= formData.costo_presupuestado ? '+ ' : '- '}
+                    {formatColombianCurrency(Math.abs(formData.costo_presupuestado - formData.costo_real)) || '$0'}
                   </strong></span>
                 </div>
               </div>
