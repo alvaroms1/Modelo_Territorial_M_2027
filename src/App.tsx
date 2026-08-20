@@ -27,6 +27,7 @@ const MainContent: React.FC = () => {
   // Activities Modal State
   const [isAddActivityModalOpen, setIsAddActivityModalOpen] = useState(false);
   const [activityToEdit, setActivityToEdit] = useState<Actividad | null>(null);
+  const [activityDefaultPhase, setActivityDefaultPhase] = useState<'programar' | 'resultados'>('programar');
 
   // Reset tab to dashboard on logout/login
   useEffect(() => {
@@ -88,19 +89,22 @@ const MainContent: React.FC = () => {
   };
 
   // Activity Handlers
-  const handleOpenAddActivityModal = () => {
+  const handleOpenAddActivityModal = (phase: 'programar' | 'resultados' = 'programar') => {
     setActivityToEdit(null);
+    setActivityDefaultPhase(phase);
     setIsAddActivityModalOpen(true);
   };
 
-  const handleEditActivity = (actividad: Actividad) => {
+  const handleEditActivity = (actividad: Actividad, phase: 'programar' | 'resultados' = 'resultados') => {
     setActivityToEdit(actividad);
+    setActivityDefaultPhase(phase);
     setIsAddActivityModalOpen(true);
   };
 
   const handleCloseActivityModal = () => {
     setIsAddActivityModalOpen(false);
     setActivityToEdit(null);
+    setActivityDefaultPhase('programar');
   };
 
   return (
@@ -118,6 +122,7 @@ const MainContent: React.FC = () => {
           <Dashboard
             setActiveTab={setActiveTab}
             onOpenAddContactoModal={handleOpenAddModal}
+            onOpenAddActivityModal={handleOpenAddActivityModal}
           />
         )}
         {activeTab === 'contactos' && (
@@ -153,6 +158,7 @@ const MainContent: React.FC = () => {
         isOpen={isAddActivityModalOpen}
         onClose={handleCloseActivityModal}
         initialActivity={activityToEdit}
+        defaultPhase={activityDefaultPhase}
       />
     </div>
   );

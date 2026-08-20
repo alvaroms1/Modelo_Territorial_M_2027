@@ -1,10 +1,120 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { BookOpen, BarChart3, AlertTriangle, CheckCircle, Info, ShieldAlert, ListChecks } from 'lucide-react';
+import { NavTab } from './Navigation';
+import {
+  BookOpen,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  ShieldAlert,
+  ListChecks,
+  CalendarDays,
+  Plus,
+  Sparkles,
+  Flame,
+  ArrowRight,
+  Clock3,
+  MapPin,
+  Users,
+  CheckCircle2,
+  FileCheck2
+} from 'lucide-react';
 
-export const LiderDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'instrucciones' | 'tablero'>('instrucciones');
+interface LiderDashboardProps {
+  setActiveTab?: (tab: NavTab) => void;
+  onOpenAddContactoModal?: () => void;
+  onOpenAddActivityModal?: (phase?: 'programar' | 'resultados') => void;
+}
+
+export const LiderDashboard: React.FC<LiderDashboardProps> = ({
+  setActiveTab,
+  onOpenAddContactoModal,
+  onOpenAddActivityModal
+}) => {
+  const [activeTab, setActiveTabLocal] = useState<'tablero' | 'instrucciones'>('tablero');
   const { currentUser, visibleContactos, visibleUsers, users, actividades, pollingStations } = useApp();
+
+  const currentDate = new Date();
+  const currentMonthNum = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  // Actividades del líder actual
+  const myActivities = useMemo(() => {
+    return actividades.filter(a => a.lider_id === currentUser?.id);
+  }, [actividades, currentUser]);
+
+  // Actividades programadas pendientes vs realizadas
+  const isRealizedActivity = (act) => {
+    return (act.asistentes_reales && act.asistentes_reales > 0) || 
+           (act.costo_real && act.costo_real > 0) || 
+           (act.nuevos_contactos_generados && act.nuevos_contactos_generados > 0) ||
+           Boolean(act.evidencia_enlace);
+  };
+
+  const myProgrammedActivities = useMemo(() => {
+    return myActivities.filter(a => !isRealizedActivity(a));
+  }, [myActivities]);
+
+  const myRealizedActivities = useMemo(() => {
+    return myActivities.filter(isRealizedActivity);
+  }, [myActivities]);
+
+  // Semáforo Mensual del Líder (Fórmula: =SI(Y(K5>=1;L5>=1);"Verde";SI(O(K5>=0,7;L5>=0,7);"Amarillo";"Rojo")))
+  const leaderMonthScorecard = useMemo(() => {
+    const monthActs = myRealizedActivities.filter(act => {
+      if (!act.fecha) return false;
+      const d = new Date(act.fecha);
+      if (isNaN(d.getTime())) return false;
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonthNum;
+    });
+
+    const monthContactos = visibleContactos.filter(c => {
+      if (!c.created_at && !c.fecha_registro) return true;
+      const d = new Date(c.created_at || c.fecha_registro || '');
+      if (isNaN(d.getTime())) return true;
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonthNum;
+    });
+
+    const actCount = monthActs.length;
+    const contactosCount = monthContactos.length;
+
+    const metaContactos = 20;
+    const metaActividades = 4;
+
+    const ratioK = contactosCount / metaContactos;
+    const ratioL = actCount / metaActividades;
+
+    let semaforo = 'ROJO';
+    let semaforoLabel = 'Rojo (Alerta de Avance)';
+    let diagnostico = 'Estás iniciando el mes. Programa tus primeras actividades para alcanzar el semáforo verde.';
+
+    if (ratioK >= 1.0 && ratioL >= 1.0) {
+      semaforo = 'VERDE';
+      semaforoLabel = 'Verde (Meta Superada)';
+      diagnostico = '¡Excelente trabajo! Has superado las metas mensuales de contactos y actividades.';
+    } else if (ratioK >= 0.7 || ratioL >= 0.7) {
+      semaforo = 'AMARILLO';
+      semaforoLabel = 'Amarillo (Buen Ritmo)';
+      diagnostico = ratioK >= 0.7
+        ? 'Muy buen ritmo de contactos. Te falta realizar más actividades presenciales.'
+        : 'Buen número de actividades. Enfócate en captar más simpatizantes y contactos.';
+    }
+
+    return {
+      actCount,
+      contactosCount,
+      metaContactos,
+      metaActividades,
+      ratioK,
+      ratioL,
+      cumpK: ratioK * 100,
+      cumpL: ratioL * 100,
+      semaforo,
+      semaforoLabel,
+      diagnostico
+    };
+  }, [myRealizedActivities, visibleContactos, currentMonthNum, currentYear]);
 
   const stats = useMemo(() => {
     // Basic stats
@@ -30,7 +140,8 @@ export const LiderDashboard: React.FC = () => {
 
     const sublideresActivos = uniqueSubliderIds.size;
     const contactosRegistrados = visibleContactos.length;
-    const actividadesRealizadas = actividades.length;
+    const actividadesRealizadas = myRealizedActivities.length;
+    const actividadesProgramadas = myProgrammedActivities.length;
     const puestosConCobertura = new Set(visibleContactos.filter(c => c.puesto_id).map(c => c.puesto_id)).size;
 
     const contactosConsentimiento = visibleContactos.filter(c => c.consentimiento_datos).length;
@@ -50,44 +161,189 @@ export const LiderDashboard: React.FC = () => {
       sublideresActivos,
       contactosRegistrados,
       actividadesRealizadas,
+      actividadesProgramadas,
       puestosConCobertura,
       contactosConsentimiento,
       estados,
       totalLideres
     };
-  }, [visibleContactos, visibleUsers, users, currentUser, actividades, pollingStations]);
+  }, [visibleContactos, visibleUsers, users, currentUser, myRealizedActivities, myProgrammedActivities]);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      
+      {/* ─── HEADER DEL LÍDER ─── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
-            Panel del Líder
-            <span className="px-2 py-1 rounded-lg text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              Territorial
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Panel del Líder Territorial
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {currentUser?.nombre_completo}
             </span>
-          </h1>
-          <p className="text-neutral-400 text-sm mt-1">
-            Gestión y seguimiento de tu zona de influencia
+          </div>
+          <p className="text-neutral-400 text-xs sm:text-sm mt-1">
+            Planifica tus actividades comunitarias, registra resultados y haz seguimiento a tus metas mensuales
           </p>
+        </div>
+
+        {/* Acciones Rápidas del Líder */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {onOpenAddContactoModal && (
+            <button
+              onClick={onOpenAddContactoModal}
+              className="px-3.5 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-200 hover:text-white flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+            >
+              <Users className="w-3.5 h-3.5 text-indigo-400" />
+              <span>+ Nuevo Contacto</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => onOpenAddActivityModal ? onOpenAddActivityModal('programar') : setActiveTab && setActiveTab('activities')}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/25 transition active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Programar Actividad</span>
+          </button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ─── CARD PRINCIPAL: SEMÁFORO MENSUAL DEL LÍDER ─── */}
+      <div className="bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" /> Tu Desempeño Territorial del Mes
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-lg sm:text-xl font-black px-3.5 py-1 rounded-2xl flex items-center gap-2 shadow-md ${
+                leaderMonthScorecard.semaforo === 'VERDE'
+                  ? 'bg-emerald-500 text-neutral-950'
+                  : leaderMonthScorecard.semaforo === 'AMARILLO'
+                  ? 'bg-amber-400 text-neutral-950'
+                  : 'bg-rose-600 text-white'
+              }`}>
+                {leaderMonthScorecard.semaforo === 'VERDE' && '🟢 Semáforo Verde'}
+                {leaderMonthScorecard.semaforo === 'AMARILLO' && '🟡 Semáforo Amarillo'}
+                {leaderMonthScorecard.semaforo === 'ROJO' && '🔴 Semáforo Rojo'}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-300">
+              {leaderMonthScorecard.diagnostico}
+            </p>
+          </div>
+
+          {/* Ratios K y L */}
+          <div className="grid grid-cols-2 gap-3 w-full lg:w-auto shrink-0">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[140px]">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase">Contactos (K)</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-xl font-black text-white">{leaderMonthScorecard.contactosCount}</span>
+                <span className="text-xs text-neutral-500">/ {leaderMonthScorecard.metaContactos} meta</span>
+              </div>
+              <div className="w-full bg-neutral-900 h-1.5 rounded-full overflow-hidden mt-2">
+                <div
+                  className={`h-full rounded-full ${leaderMonthScorecard.cumpK >= 100 ? 'bg-emerald-500' : leaderMonthScorecard.cumpK >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  style={{ width: `${Math.min(leaderMonthScorecard.cumpK, 100)}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-neutral-400 mt-1 block">
+                {leaderMonthScorecard.cumpK.toFixed(0)}% cumplimiento
+              </span>
+            </div>
+
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[140px]">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase">Actividades (L)</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-xl font-black text-white">{leaderMonthScorecard.actCount}</span>
+                <span className="text-xs text-neutral-500">/ {leaderMonthScorecard.metaActividades} meta</span>
+              </div>
+              <div className="w-full bg-neutral-900 h-1.5 rounded-full overflow-hidden mt-2">
+                <div
+                  className={`h-full rounded-full ${leaderMonthScorecard.cumpL >= 100 ? 'bg-emerald-500' : leaderMonthScorecard.cumpL >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  style={{ width: `${Math.min(leaderMonthScorecard.cumpL, 100)}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-neutral-400 mt-1 block">
+                {leaderMonthScorecard.cumpL.toFixed(0)}% cumplimiento
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── PRÓXIMAS ACTIVIDADES PROGRAMADAS DEL LÍDER ─── */}
+      {myProgrammedActivities.length > 0 && (
+        <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Clock3 className="w-5 h-5 text-indigo-400" />
+              Tus Próximas Actividades Programadas ({myProgrammedActivities.length})
+            </h3>
+            {setActiveTab && (
+              <button
+                onClick={() => setActiveTab('activities')}
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ver Todas</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {myProgrammedActivities.map(act => (
+              <div key={act.id} className="bg-neutral-950 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 flex flex-col justify-between gap-3 transition">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
+                      ⏳ Programada
+                    </span>
+                    <span className="text-xs font-bold text-white">{act.fecha}</span>
+                  </div>
+                  <h4 className="font-bold text-sm text-neutral-200 mt-2">
+                    {act.tipo_actividad.replace(/_/g, ' ')}
+                  </h4>
+                  <div className="text-xs text-neutral-400 space-y-1 mt-1">
+                    <p className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-rose-400" />
+                      {act.barrio || 'Barrio por definir'}
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-indigo-400" />
+                      Meta asistentes: <strong className="text-white">{act.meta_asistentes}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (onOpenAddActivityModal) {
+                      onOpenAddActivityModal('resultados');
+                    } else if (setActiveTab) {
+                      setActiveTab('activities');
+                    }
+                  }}
+                  className="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer"
+                >
+                  <FileCheck2 className="w-3.5 h-3.5" />
+                  <span>Registrar Resultados Reales</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── TABS: TABLERO vs INSTRUCCIONES ─── */}
       <div className="flex gap-2 p-1 bg-neutral-900 border border-neutral-800 rounded-xl overflow-x-auto custom-scrollbar">
         <button
-          onClick={() => setActiveTab('instrucciones')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${
-            activeTab === 'instrucciones'
-              ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-lg shadow-indigo-500/20'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          Instrucciones del Modelo
-        </button>
-        <button
-          onClick={() => setActiveTab('tablero')}
+          onClick={() => setActiveTabLocal('tablero')}
           className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${
             activeTab === 'tablero'
               ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/20'
@@ -96,6 +352,17 @@ export const LiderDashboard: React.FC = () => {
         >
           <BarChart3 className="w-4 h-4" />
           Tablero de Control Territorial
+        </button>
+        <button
+          onClick={() => setActiveTabLocal('instrucciones')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${
+            activeTab === 'instrucciones'
+              ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-lg shadow-indigo-500/20'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Instrucciones del Modelo
         </button>
       </div>
 
@@ -227,9 +494,13 @@ export const LiderDashboard: React.FC = () => {
                     </tr>
                     <tr>
                       <td className="px-4 py-3">Seguimientos al día</td>
-                      <td className="px-4 py-3 text-center">0</td>
-                      <td className="px-4 py-3 text-center">0</td>
-                      <td className="px-4 py-3 text-center font-medium text-emerald-400 bg-emerald-500/10">0%</td>
+                      <td className="px-4 py-3 text-center">{stats.actividadesRealizadas}</td>
+                      <td className="px-4 py-3 text-center">{stats.actividadesRealizadas + stats.actividadesProgramadas}</td>
+                      <td className="px-4 py-3 text-center font-medium text-emerald-400 bg-emerald-500/10">
+                        {stats.actividadesRealizadas + stats.actividadesProgramadas > 0
+                          ? Math.round((stats.actividadesRealizadas / (stats.actividadesRealizadas + stats.actividadesProgramadas)) * 100)
+                          : 100}%
+                      </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3">Actividades con meta cumplida</td>
@@ -265,9 +536,9 @@ export const LiderDashboard: React.FC = () => {
                       <td className="px-4 py-3 text-xs text-neutral-400">Sin puesto principal</td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3">Contactos vencidos</td>
-                      <td className="px-4 py-3 text-center font-bold text-rose-400">0</td>
-                      <td className="px-4 py-3 text-xs text-neutral-400">Seguimiento atrasado</td>
+                      <td className="px-4 py-3">Actividades pendientes por ejecutar</td>
+                      <td className="px-4 py-3 text-center font-bold text-amber-400">{stats.actividadesProgramadas}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-400">Programadas por cerrar</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3">Registros sin consentimiento</td>
@@ -281,91 +552,6 @@ export const LiderDashboard: React.FC = () => {
                     </tr>
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Estado de líder */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden lg:col-span-1">
-              <div className="bg-blue-600 px-4 py-2">
-                <h3 className="text-sm font-bold text-white uppercase">Estado de líder</h3>
-              </div>
-              <table className="w-full text-sm text-left">
-                <thead className="bg-neutral-950/60 text-neutral-300">
-                  <tr>
-                    <th className="px-4 py-2 border-b border-neutral-800/50">Estado</th>
-                    <th className="px-4 py-2 border-b border-neutral-800/50 text-right">Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800/50 text-neutral-300">
-                  <tr>
-                    <td className="px-4 py-3">Activo</td>
-                    <td className="px-4 py-3 text-right font-medium">{stats.estados.activo}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3">En formación</td>
-                    <td className="px-4 py-3 text-right font-medium">{stats.estados.enFormacion}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3">En pausa</td>
-                    <td className="px-4 py-3 text-right font-medium">{stats.estados.enPausa}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3">Retirado</td>
-                    <td className="px-4 py-3 text-right font-medium">{stats.estados.retirado}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Gráfico Líderes por estado */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 lg:col-span-2 flex flex-col">
-              <h3 className="text-center font-bold text-lg text-white mb-6">Líderes por estado</h3>
-              <div className="flex-1 flex items-end gap-4 sm:gap-12 justify-center pt-8 pb-4 border-l border-b border-neutral-700 px-4 relative min-h-[200px]">
-                {/* Y-axis lines */}
-                <div className="absolute inset-0 border-b border-neutral-700 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-1/4 border-b border-dashed border-neutral-800 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-2/4 border-b border-dashed border-neutral-800 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-3/4 border-b border-dashed border-neutral-800 pointer-events-none" />
-                <div className="absolute inset-x-0 top-0 border-b border-dashed border-neutral-800 pointer-events-none" />
-                
-                {/* Bars */}
-                <div className="relative flex flex-col items-center w-16 group z-10">
-                  <div className="absolute -top-8 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">{stats.estados.activo}</div>
-                  <div 
-                    className="w-full bg-blue-500 rounded-t-sm transition-all duration-1000"
-                    style={{ height: `${(stats.estados.activo / stats.totalLideres) * 100}%`, minHeight: stats.estados.activo > 0 ? '4px' : '0' }}
-                  />
-                  <span className="absolute -bottom-8 text-xs text-neutral-400 font-medium">Activo</span>
-                </div>
-                
-                <div className="relative flex flex-col items-center w-16 group z-10">
-                  <div className="absolute -top-8 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">{stats.estados.enFormacion}</div>
-                  <div 
-                    className="w-full bg-indigo-500 rounded-t-sm transition-all duration-1000"
-                    style={{ height: `${(stats.estados.enFormacion / stats.totalLideres) * 100}%`, minHeight: stats.estados.enFormacion > 0 ? '4px' : '0' }}
-                  />
-                  <span className="absolute -bottom-8 text-xs text-neutral-400 font-medium">En formación</span>
-                </div>
-                
-                <div className="relative flex flex-col items-center w-16 group z-10">
-                  <div className="absolute -top-8 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">{stats.estados.enPausa}</div>
-                  <div 
-                    className="w-full bg-amber-500 rounded-t-sm transition-all duration-1000"
-                    style={{ height: `${(stats.estados.enPausa / stats.totalLideres) * 100}%`, minHeight: stats.estados.enPausa > 0 ? '4px' : '0' }}
-                  />
-                  <span className="absolute -bottom-8 text-xs text-neutral-400 font-medium whitespace-nowrap">En pausa</span>
-                </div>
-                
-                <div className="relative flex flex-col items-center w-16 group z-10">
-                  <div className="absolute -top-8 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">{stats.estados.retirado}</div>
-                  <div 
-                    className="w-full bg-rose-500 rounded-t-sm transition-all duration-1000"
-                    style={{ height: `${(stats.estados.retirado / stats.totalLideres) * 100}%`, minHeight: stats.estados.retirado > 0 ? '4px' : '0' }}
-                  />
-                  <span className="absolute -bottom-8 text-xs text-neutral-400 font-medium">Retirado</span>
-                </div>
               </div>
             </div>
           </div>

@@ -32,15 +32,19 @@ import {
   Shield,
   Activity,
   Flame,
-  ArrowUpDown
+  ShieldCheck,
+  CheckCircle,
+  Clock3,
+  FileCheck2
 } from 'lucide-react';
 
 interface ActivitiesViewProps {
-  onOpenAddActivityModal: () => void;
-  onEditActivity: (actividad: Actividad) => void;
+  onOpenAddActivityModal: (phase?: 'programar' | 'resultados') => void;
+  onEditActivity: (actividad: Actividad, phase?: 'programar' | 'resultados') => void;
 }
 
 type ActivitySubTab = 'plan' | 'semaforo' | 'analisis';
+type ActivityStatusFilter = 'ALL' | 'PROGRAMADAS' | 'REALIZADAS';
 
 const MESES_LISTA: { id: MesesAnno; label: string; num: number }[] = [
   { id: 'ENERO', label: 'Enero', num: 0 },
@@ -68,6 +72,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const currentMonthObj = MESES_LISTA[currentDate.getMonth()] || MESES_LISTA[0];
 
   const [activeSubTab, setActiveSubTab] = useState<ActivitySubTab>('plan');
+  const [statusFilter, setStatusFilter] = useState<ActivityStatusFilter>('ALL');
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
   const [selectedLeaderId, setSelectedLeaderId] = useState<string>('ALL');
@@ -81,6 +86,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [targetActividadesPerMonth, setTargetActividadesPerMonth] = useState<number>(4);
 
   const isSupervisor = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'LIDER_PRINCIPAL' || currentUser?.rol === 'LIDER_PRINCIPAL_INVITADO';
+  const isLider = currentUser?.rol === 'LIDER' || currentUser?.rol === 'SUBLIDER';
 
   // Base list of users based on current user scope
   const accessibleUsers = useMemo(() => {
@@ -101,9 +107,25 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     return actividades.filter(a => accessibleUserIds.has(a.lider_id));
   }, [actividades, accessibleUserIds, currentUser]);
 
+  // Helper to test if an activity is realized vs programmed
+  const isRealizedActivity = (act: Actividad) => {
+    return (act.asistentes_reales && act.asistentes_reales > 0) || 
+           (act.costo_real && act.costo_real > 0) || 
+           (act.nuevos_contactos_generados && act.nuevos_contactos_generados > 0) ||
+           Boolean(act.evidencia_enlace);
+  };
+
   // Filtered activities based on filters
   const filteredActividades = useMemo(() => {
     return baseActividades.filter(act => {
+      // Status filter (Programadas vs Realizadas)
+      if (statusFilter === 'PROGRAMADAS' && isRealizedActivity(act)) {
+        return false;
+      }
+      if (statusFilter === 'REALIZADAS' && !isRealizedActivity(act)) {
+        return false;
+      }
+
       // Filter by Leader
       if (selectedLeaderId !== 'ALL' && act.lider_id !== selectedLeaderId) {
         return false;
@@ -149,7 +171,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
       return true;
     });
-  }, [baseActividades, selectedLeaderId, selectedYear, selectedMonth, selectedTipo, searchQuery, users, pollingStations]);
+  }, [baseActividades, statusFilter, selectedLeaderId, selectedYear, selectedMonth, selectedTipo, searchQuery, users, pollingStations]);
 
   // Helper functions
   const getLeaderInfo = (liderId: string) => {
@@ -185,7 +207,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       case 'REUNION_COMUNITARIA': return 'Reunión Comunitaria';
       case 'JORNADA_SOCIAL': return 'Jornada Social';
       case 'CAPACITACION': return 'Capacitación';
-      case 'VISITA_TERRITORIAL': return 'Visita Territorial';
+      case 'VISITA_TERRITORIAL': return 'Visita Casa a Casa';
       case 'ACTIVIDAD_CULTURAL': return 'Actividad Cultural';
       default: return tipo.replace(/_/g, ' ');
     }
@@ -224,9 +246,15 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         return d.getFullYear() === selectedYear && d.getMonth() === monthNum;
       });
 
-      const actRealizadas = leaderActivities.length;
+      // Solo contamos las realizadas para la meta efectiva
+      const actRealizadasList = leaderActivities.filter(isRealizedActivity);
+      const actRealizadas = actRealizadasList.length;
+      const actProgramadas = leaderActivities.length - actRealizadas;
+
       const totalAsistentes = leaderActivities.reduce((sum, a) => sum + (a.asistentes_reales || 0), 0);
       const contactosDesdeActividades = leaderActivities.reduce((sum, a) => sum + (a.nuevos_contactos_generados || 0), 0);
+      const totalGastoReal = leaderActivities.reduce((sum, a) => sum + (a.costo_real || 0), 0);
+      const totalPresupuesto = leaderActivities.reduce((sum, a) => sum + (a.costo_presupuestado || 0), 0);
 
       // 2. Contactos registrados en este mes por este líder
       const monthContactos = contactos.filter(c => {
@@ -280,7 +308,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         contactosActivos,
         metaActividades: metaA,
         actividadesRealizadas: actRealizadas,
+        actividadesProgramadas: actProgramadas,
         asistentesTotales: totalAsistentes,
+        totalGastoReal,
+        totalPresupuesto,
         ratioK,
         ratioL,
         cumpContactosPct,
@@ -315,6 +346,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   // Global KPIs summary
   const summaryKPIs = useMemo(() => {
     const totalActs = filteredActividades.length;
+    const totalRealizadas = filteredActividades.filter(isRealizedActivity).length;
+    const totalProgramadas = totalActs - totalRealizadas;
+
     const totalAsistentes = filteredActividades.reduce((s, a) => s + (a.asistentes_reales || 0), 0);
     const totalMetaAsistentes = filteredActividades.reduce((s, a) => s + (a.meta_asistentes || 0), 0);
     const totalNuevosContactos = filteredActividades.reduce((s, a) => s + (a.nuevos_contactos_generados || 0), 0);
@@ -322,7 +356,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     const totalCostoReal = filteredActividades.reduce((s, a) => s + (a.costo_real || 0), 0);
 
     const cumpAsistenciaPromedio = totalMetaAsistentes > 0 ? (totalAsistentes / totalMetaAsistentes) * 100 : 0;
-    const avgAsistentesPorAct = totalActs > 0 ? Math.round(totalAsistentes / totalActs) : 0;
+    const avgAsistentesPorAct = totalRealizadas > 0 ? Math.round(totalAsistentes / totalRealizadas) : 0;
 
     // Semáforo distribution
     const countVerde = monthlyLeaderScorecards.filter(s => s.semaforo === 'VERDE').length;
@@ -331,6 +365,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
     return {
       totalActs,
+      totalRealizadas,
+      totalProgramadas,
       totalAsistentes,
       totalNuevosContactos,
       totalPresupuesto,
@@ -353,10 +389,12 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     const rows = filteredActividades.map(act => {
       const leader = getLeaderInfo(act.lider_id);
       const station = pollingStations.find(p => p.id === act.puesto_id);
+      const isReal = isRealizedActivity(act);
       const cumpAsistencia = act.meta_asistentes > 0 ? ((act.asistentes_reales / act.meta_asistentes) * 100).toFixed(1) + '%' : '0.0%';
 
       return {
         'ID actividad': act.id.slice(0, 8).toUpperCase(),
+        'Estado': isReal ? 'REALIZADA' : 'PROGRAMADA',
         'ID lider': leader.cedula,
         'Nombre lider': leader.nombre_completo,
         'Fecha': act.fecha,
@@ -389,7 +427,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     }
 
     ws['!cols'] = [
-      { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 12 },
+      { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 12 },
       { wch: 22 }, { wch: 14 }, { wch: 26 }, { wch: 20 },
       { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 },
       { wch: 18 }, { wch: 22 }, { wch: 30 }, { wch: 35 }
@@ -413,7 +451,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       'Contactos activos': row.contactosActivos,
       'Meta actividades': row.metaActividades,
       'Actividades realizadas': row.actividadesRealizadas,
+      'Actividades programadas': row.actividadesProgramadas,
       'Asistentes': row.asistentesTotales,
+      'Gasto Real Total': row.totalGastoReal,
       'Cumplimiento contactos (K)': `${row.cumpContactosPct.toFixed(1)}%`,
       'Cumplimiento actividades (L)': `${row.cumpActividadesPct.toFixed(1)}%`,
       'Semáforo': row.semaforo,
@@ -434,7 +474,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     }
 
     for (let R = 1; R <= rows.length; ++R) {
-      const semCell = ws[XLSX.utils.encode_cell({ r: R, c: 13 })];
+      const semCell = ws[XLSX.utils.encode_cell({ r: R, c: 15 })];
       if (semCell) {
         const val = semCell.v;
         let colorHex = 'FFFFFF';
@@ -454,7 +494,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     ws['!cols'] = [
       { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 18 },
       { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 20 },
-      { wch: 14 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 45 }
+      { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 45 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -480,11 +520,13 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                   Gestión de Actividades Comunitarias
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {summaryKPIs.totalActs} Registradas
+                  {summaryKPIs.totalRealizadas} Realizadas · {summaryKPIs.totalProgramadas} Programadas
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-neutral-400 mt-1">
-                Planificación territorial, registro de eventos comunitarios y semáforo de desempeño por líder
+                {isSupervisor
+                  ? 'Supervisión territorial, auditoría del verdadero valor gastado y semáforo de líderes'
+                  : 'Programa tus actividades comunitarias, estima tu presupuesto y reporta los resultados de cada jornada'}
               </p>
             </div>
           </div>
@@ -510,11 +552,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             </button>
 
             <button
-              onClick={onOpenAddActivityModal}
+              onClick={() => onOpenAddActivityModal('programar')}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Nueva Actividad</span>
+              <span>Programar Actividad</span>
             </button>
           </div>
         </div>
@@ -595,10 +637,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-neutral-400 text-xs">
             <span>Actividades Realizadas</span>
-            <Activity className="w-4 h-4 text-indigo-400" />
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-white mt-2">{summaryKPIs.totalActs}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5 font-medium">Eventos comunitarios</p>
+          <p className="text-2xl sm:text-3xl font-black text-white mt-2">{summaryKPIs.totalRealizadas}</p>
+          <p className="text-[11px] text-neutral-500 mt-0.5 font-medium">{summaryKPIs.totalProgramadas} programadas pendientes</p>
         </div>
 
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between">
@@ -621,30 +663,21 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-neutral-400 text-xs">
-            <span>Cumplimiento Asistencia</span>
-            <TrendingUp className="w-4 h-4 text-purple-400" />
+            <span>Gasto Real Ejecutado</span>
+            <DollarSign className="w-4 h-4 text-rose-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-white mt-2">
-            {summaryKPIs.cumpAsistenciaPromedio.toFixed(0)}%
+          <p className="text-xl sm:text-2xl font-black text-white mt-2">
+            {formatCurrency(summaryKPIs.totalCostoReal)}
           </p>
-          <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-            <div
-              className={`h-full rounded-full transition-all ${
-                summaryKPIs.cumpAsistenciaPromedio >= 100
-                  ? 'bg-emerald-500'
-                  : summaryKPIs.cumpAsistenciaPromedio >= 70
-                  ? 'bg-amber-500'
-                  : 'bg-rose-500'
-              }`}
-              style={{ width: `${Math.min(summaryKPIs.cumpAsistenciaPromedio, 100)}%` }}
-            />
-          </div>
+          <p className="text-[11px] text-neutral-500 mt-0.5 font-medium">
+            Presupuestado: {formatCurrency(summaryKPIs.totalPresupuesto)}
+          </p>
         </div>
 
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 col-span-2 lg:col-span-1 flex flex-col justify-between">
           <div className="flex items-center justify-between text-neutral-400 text-xs">
-            <span>Estado del Semáforo</span>
-            <Flame className="w-4 h-4 text-rose-400" />
+            <span>Semáforo del Equipo</span>
+            <Flame className="w-4 h-4 text-amber-400" />
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
@@ -657,13 +690,43 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               🔴 {summaryKPIs.countRojo}
             </span>
           </div>
-          <p className="text-[11px] text-neutral-500 mt-1 font-medium">{summaryKPIs.totalLeaders} Líderes monitoreados</p>
+          <p className="text-[11px] text-neutral-500 mt-1 font-medium">{summaryKPIs.totalLeaders} Líderes en el mes</p>
         </div>
       </div>
 
       {/* ─── 4. BARRA DE FILTROS GLOBALES ─── */}
       <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap flex-1">
+          {/* Selector de Estado en Plan de Actividades */}
+          {activeSubTab === 'plan' && (
+            <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 p-1 rounded-xl">
+              <button
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  statusFilter === 'ALL' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'
+                }`}
+              >
+                Todas ({baseActividades.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('PROGRAMADAS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  statusFilter === 'PROGRAMADAS' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-indigo-400 hover:text-indigo-300'
+                }`}
+              >
+                <Clock3 className="w-3 h-3" /> Programadas
+              </button>
+              <button
+                onClick={() => setStatusFilter('REALIZADAS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  statusFilter === 'REALIZADAS' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-emerald-400 hover:text-emerald-300'
+                }`}
+              >
+                <CheckCircle className="w-3 h-3" /> Realizadas
+              </button>
+            </div>
+          )}
+
           {/* Selector de Año */}
           <select
             value={selectedYear}
@@ -714,7 +777,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               <option value="REUNION_COMUNITARIA">Reunión Comunitaria</option>
               <option value="JORNADA_SOCIAL">Jornada Social</option>
               <option value="CAPACITACION">Capacitación</option>
-              <option value="VISITA_TERRITORIAL">Visita Territorial</option>
+              <option value="VISITA_TERRITORIAL">Visita Casa a Casa</option>
               <option value="ACTIVIDAD_CULTURAL">Actividad Cultural</option>
             </select>
           )}
@@ -724,7 +787,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 p-1 rounded-xl">
               <button
                 onClick={() => setSemaforoFilter('ALL')}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition ${
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   semaforoFilter === 'ALL' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'
                 }`}
               >
@@ -732,7 +795,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </button>
               <button
                 onClick={() => setSemaforoFilter('VERDE')}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
                   semaforoFilter === 'VERDE' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-emerald-500 hover:text-emerald-400'
                 }`}
               >
@@ -740,7 +803,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </button>
               <button
                 onClick={() => setSemaforoFilter('AMARILLO')}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
                   semaforoFilter === 'AMARILLO' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-amber-500 hover:text-amber-400'
                 }`}
               >
@@ -748,7 +811,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </button>
               <button
                 onClick={() => setSemaforoFilter('ROJO')}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
                   semaforoFilter === 'ROJO' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-rose-500 hover:text-rose-400'
                 }`}
               >
@@ -783,14 +846,16 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               <CalendarDays className="w-12 h-12 text-neutral-600 mx-auto mb-3" />
               <h3 className="text-base font-bold text-neutral-300">No se encontraron actividades registradas</h3>
               <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
-                No hay actividades comunitarias que coincidan con los filtros seleccionados. Comienza registrando una nueva actividad.
+                {statusFilter === 'PROGRAMADAS'
+                  ? 'No tienes actividades programadas pendientes en este momento.'
+                  : 'No hay actividades comunitarias que coincidan con los filtros seleccionados.'}
               </p>
               <button
-                onClick={onOpenAddActivityModal}
-                className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold inline-flex items-center gap-2 transition shadow-md shadow-indigo-600/20"
+                onClick={() => onOpenAddActivityModal('programar')}
+                className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold inline-flex items-center gap-2 transition shadow-md shadow-indigo-600/20 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                Registrar Primera Actividad
+                Programar Nueva Actividad
               </button>
             </div>
           ) : (
@@ -799,13 +864,13 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-neutral-950/80 border-b border-neutral-800 text-neutral-400 font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-4">Fecha & Tipo</th>
+                      <th className="py-3.5 px-4">Estado & Fecha</th>
                       <th className="py-3.5 px-4">Líder Responsable</th>
                       <th className="py-3.5 px-4">Puesto / Barrio</th>
                       <th className="py-3.5 px-4 text-center">Asistentes (Real / Meta)</th>
                       <th className="py-3.5 px-4 text-center">% Cumplimiento</th>
                       <th className="py-3.5 px-4 text-center">Nuevos Contactos</th>
-                      <th className="py-3.5 px-4 text-right">Presupuesto vs Real</th>
+                      <th className="py-3.5 px-4 text-right">Presupuesto vs Gasto Real</th>
                       <th className="py-3.5 px-4 text-center">Evidencia</th>
                       <th className="py-3.5 px-4 text-right">Acciones</th>
                     </tr>
@@ -814,18 +879,30 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     {filteredActividades.map((act) => {
                       const leader = getLeaderInfo(act.lider_id);
                       const station = pollingStations.find(p => p.id === act.puesto_id);
+                      const isReal = isRealizedActivity(act);
                       const cumpPct = act.meta_asistentes > 0 ? (act.asistentes_reales / act.meta_asistentes) * 100 : 0;
 
                       return (
                         <tr key={act.id} className="hover:bg-neutral-800/40 transition">
-                          {/* Fecha & Tipo */}
+                          {/* Estado & Fecha */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-white flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                {isReal ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                                    <CheckCircle2 className="w-3 h-3" /> Realizada
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
+                                    <Clock className="w-3 h-3" /> Programada
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-bold text-white text-xs flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
                                 {act.fecha || 'Sin fecha'}
                               </span>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md mt-1 w-fit border border-indigo-500/20">
+                              <span className="text-[10px] text-neutral-400 font-medium">
                                 {formatTipoLabel(act.tipo_actividad)}
                               </span>
                             </div>
@@ -859,53 +936,67 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
                           {/* Asistentes (Real / Meta) */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <div className="font-black text-white text-sm">
-                              {act.asistentes_reales || 0}{' '}
-                              <span className="text-xs font-normal text-neutral-500">/ {act.meta_asistentes || 0}</span>
-                            </div>
+                            {isReal ? (
+                              <div className="font-black text-white text-sm">
+                                {act.asistentes_reales || 0}{' '}
+                                <span className="text-xs font-normal text-neutral-500">/ {act.meta_asistentes || 0}</span>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-neutral-400">
+                                Meta: <strong className="text-white">{act.meta_asistentes || 0}</strong>
+                              </div>
+                            )}
                           </td>
 
                           {/* % Cumplimiento */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <div className="inline-flex flex-col items-center">
-                              <span
-                                className={`text-xs font-black px-2 py-0.5 rounded-md border ${
-                                  cumpPct >= 100
-                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                    : cumpPct >= 70
-                                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                                    : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                                }`}
-                              >
-                                {cumpPct.toFixed(0)}%
-                              </span>
-                              <div className="w-16 bg-neutral-800 h-1 rounded-full overflow-hidden mt-1">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    cumpPct >= 100 ? 'bg-emerald-500' : cumpPct >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                            {isReal ? (
+                              <div className="inline-flex flex-col items-center">
+                                <span
+                                  className={`text-xs font-black px-2 py-0.5 rounded-md border ${
+                                    cumpPct >= 100
+                                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                      : cumpPct >= 70
+                                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                      : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
                                   }`}
-                                  style={{ width: `${Math.min(cumpPct, 100)}%` }}
-                                />
+                                >
+                                  {cumpPct.toFixed(0)}%
+                                </span>
+                                <div className="w-16 bg-neutral-800 h-1 rounded-full overflow-hidden mt-1">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      cumpPct >= 100 ? 'bg-emerald-500' : cumpPct >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                                    }`}
+                                    style={{ width: `${Math.min(cumpPct, 100)}%` }}
+                                  />
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <span className="text-[11px] text-neutral-500 italic">Pendiente ejecución</span>
+                            )}
                           </td>
 
                           {/* Nuevos Contactos */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1 font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-xs">
-                              <Sparkles className="w-3 h-3" />
-                              +{act.nuevos_contactos_generados || 0}
-                            </span>
+                            {isReal ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-xs">
+                                <Sparkles className="w-3 h-3" />
+                                +{act.nuevos_contactos_generados || 0}
+                              </span>
+                            ) : (
+                              <span className="text-neutral-600 text-xs">-</span>
+                            )}
                           </td>
 
                           {/* Presupuesto vs Real */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex flex-col items-end">
-                              <span className="font-semibold text-neutral-300">
-                                {formatCurrency(act.costo_real)}
+                              <span className="font-semibold text-rose-300">
+                                Real: {formatCurrency(act.costo_real)}
                               </span>
                               <span className="text-[10px] text-neutral-500">
-                                Meta: {formatCurrency(act.costo_presupuestado)}
+                                Presupuesto: {formatCurrency(act.costo_presupuestado)}
                               </span>
                             </div>
                           </td>
@@ -930,6 +1021,25 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           {/* Acciones */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
+                              {!isReal ? (
+                                <button
+                                  onClick={() => onEditActivity(act, 'resultados')}
+                                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-[11px] flex items-center gap-1 transition shadow-sm cursor-pointer"
+                                  title="Ingresar personas asistentes reales, contactos y costo real"
+                                >
+                                  <FileCheck2 className="w-3 h-3" />
+                                  <span>Registrar Resultados</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => onEditActivity(act, 'resultados')}
+                                  className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-indigo-300 hover:text-white transition cursor-pointer"
+                                  title={isSupervisor ? 'Auditar y validar costo real y resultados' : 'Editar resultados'}
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => setSelectedActivityDetail(act)}
                                 className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer"
@@ -937,13 +1047,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => onEditActivity(act)}
-                                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer"
-                                title="Editar actividad"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
+
                               <button
                                 onClick={() => handleDelete(act.id)}
                                 className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition cursor-pointer"
@@ -1006,8 +1110,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     <th className="py-3.5 px-4 text-center">Nuevos Contactos</th>
                     <th className="py-3.5 px-4 text-center">Contactos Activos</th>
                     <th className="py-3.5 px-4 text-center">Meta Actividades</th>
-                    <th className="py-3.5 px-4 text-center">Actividades Realizadas</th>
+                    <th className="py-3.5 px-4 text-center">Act. Realizadas</th>
+                    <th className="py-3.5 px-4 text-center">Act. Programadas</th>
                     <th className="py-3.5 px-4 text-center">Asistentes</th>
+                    <th className="py-3.5 px-4 text-right">Gasto Real Total</th>
                     <th className="py-3.5 px-4 text-center">Cumpl. Contactos (K)</th>
                     <th className="py-3.5 px-4 text-center">Cumpl. Actividades (L)</th>
                     <th className="py-3.5 px-4 text-center">Semáforo</th>
@@ -1026,7 +1132,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           <div>
                             <p className="font-bold text-white">{row.nombreLider}</p>
                             <span className="text-[10px] text-neutral-400 font-medium">
-                              CC: {row.liderCedula} · {row.rol.replace(/_/g, ' ')}
+                              CC: {row.liderCedula} · {row.rol.replace(/_/g, ' ') }
                             </span>
                           </div>
                         </div>
@@ -1055,15 +1161,25 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       </td>
 
                       {/* Actividades Realizadas */}
-                      <td className="py-3.5 px-4 text-center font-bold text-white">
-                        <span className="px-2 py-0.5 rounded-lg bg-neutral-800">
+                      <td className="py-3.5 px-4 text-center font-bold text-emerald-400">
+                        <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                           {row.actividadesRealizadas}
                         </span>
                       </td>
 
+                      {/* Actividades Programadas */}
+                      <td className="py-3.5 px-4 text-center font-semibold text-indigo-400">
+                        {row.actividadesProgramadas}
+                      </td>
+
                       {/* Asistentes Totales */}
-                      <td className="py-3.5 px-4 text-center font-bold text-emerald-400">
+                      <td className="py-3.5 px-4 text-center font-bold text-white">
                         {row.asistentesTotales}
+                      </td>
+
+                      {/* Gasto Real Total */}
+                      <td className="py-3.5 px-4 text-right font-bold text-rose-300 whitespace-nowrap">
+                        {formatCurrency(row.totalGastoReal)}
                       </td>
 
                       {/* Cumplimiento Contactos (K) */}
@@ -1182,7 +1298,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       </div>
                       <div>
                         <p className="font-bold text-white text-xs">{row.nombreLider}</p>
-                        <p className="text-[10px] text-neutral-400">{row.actividadesRealizadas} actividades realizadas</p>
+                        <p className="text-[10px] text-neutral-400">{row.actividadesRealizadas} realizadas · {row.actividadesProgramadas} programadas</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -1207,7 +1323,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </div>
               <button
                 onClick={() => setSelectedActivityDetail(null)}
-                className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition cursor-pointer"
               >
                 ✕
               </button>
@@ -1215,6 +1331,12 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
             <div className="space-y-3 text-xs">
               <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Estado:</span>
+                  <span className={`font-bold ${isRealizedActivity(selectedActivityDetail) ? 'text-emerald-400' : 'text-indigo-400'}`}>
+                    {isRealizedActivity(selectedActivityDetail) ? '✅ Realizada' : '⏳ Programada'}
+                  </span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Tipo:</span>
                   <span className="font-bold text-white">{formatTipoLabel(selectedActivityDetail.tipo_actividad)}</span>
@@ -1247,8 +1369,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                   <span className="font-bold text-indigo-400">+{selectedActivityDetail.nuevos_contactos_generados}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-400">Presupuesto / Real:</span>
-                  <span className="font-bold text-white">{formatCurrency(selectedActivityDetail.costo_real)} / {formatCurrency(selectedActivityDetail.costo_presupuestado)}</span>
+                  <span className="text-neutral-400">Costo Real / Presupuesto:</span>
+                  <span className="font-bold text-rose-300">
+                    {formatCurrency(selectedActivityDetail.costo_real)} / <span className="text-neutral-400">{formatCurrency(selectedActivityDetail.costo_presupuestado)}</span>
+                  </span>
                 </div>
               </div>
 
@@ -1280,12 +1404,12 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 onClick={() => {
                   const act = selectedActivityDetail;
                   setSelectedActivityDetail(null);
-                  onEditActivity(act);
+                  onEditActivity(act, 'resultados');
                 }}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Edit2 className="w-3.5 h-3.5" />
-                Editar Actividad
+                {isRealizedActivity(selectedActivityDetail) ? 'Editar Resultados' : 'Registrar Resultados Reales'}
               </button>
             </div>
           </div>

@@ -18,11 +18,13 @@ import {
 interface DashboardProps {
   setActiveTab: (tab: NavTab) => void;
   onOpenAddContactoModal: () => void;
+  onOpenAddActivityModal?: (phase?: 'programar' | 'resultados') => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   setActiveTab,
   onOpenAddContactoModal,
+  onOpenAddActivityModal,
 }) => {
   const { currentUser, visibleContactos, visibleUsers, users, pollingStations, actividades } = useApp();
 
@@ -45,8 +47,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   if (!currentUser) return null;
 
-  if (currentUser.rol === 'LIDER') {
-    return <LiderDashboard />;
+  if (currentUser.rol === 'LIDER' || currentUser.rol === 'SUBLIDER') {
+    return (
+      <LiderDashboard
+        setActiveTab={setActiveTab}
+        onOpenAddContactoModal={onOpenAddContactoModal}
+        onOpenAddActivityModal={onOpenAddActivityModal}
+      />
+    );
   }
 
   if (currentUser.rol === 'ADMIN' || currentUser.rol === 'LIDER_PRINCIPAL' || currentUser.rol === 'LIDER_PRINCIPAL_INVITADO') {
