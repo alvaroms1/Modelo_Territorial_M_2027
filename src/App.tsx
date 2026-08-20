@@ -51,7 +51,7 @@ const MainContent: React.FC = () => {
       />
 
       {/* Main Tab Content */}
-      <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-5 pb-16 max-w-7xl w-full mx-auto">
+      <main className="flex-1 px-3 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-28 md:pb-16 max-w-7xl w-full mx-auto">
         {activeTab === 'dashboard' && (
           <Dashboard
             setActiveTab={setActiveTab}
