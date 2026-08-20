@@ -465,7 +465,7 @@ export const AdminDashboard: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Tablero de Mando Territorial
             </h1>
-            <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-600/30 to-rose-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-black uppercase tracking-wider shadow-sm">
+            <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 border border-indigo-500/40 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20">
               {currentUser?.rol.replace(/_/g, ' ')}
             </span>
           </div>
