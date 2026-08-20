@@ -16,10 +16,11 @@ import {
   Shield,
   Layers,
   ChevronRight,
-  Palette
+  Palette,
+  CalendarDays
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'contactos' | 'leaders' | 'polling-stations' | 'whatsapp' | 'excel' | 'design';
+export type NavTab = 'dashboard' | 'contactos' | 'leaders' | 'activities' | 'polling-stations' | 'whatsapp' | 'excel' | 'design';
 
 interface NavigationProps {
   activeTab: NavTab;
@@ -32,7 +33,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   setActiveTab,
   onOpenAddContactoModal,
 }) => {
-  const { currentUser, logout, visibleContactos } = useApp();
+  const { currentUser, logout, visibleContactos, actividades } = useApp();
   const { confirm } = useConfirm();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -54,6 +55,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard, desc: 'Tablero y Analítica' },
     { id: 'contactos' as NavTab, label: 'Contactos', icon: Users, badge: visibleContactos.length, desc: 'Directorio Electoral' },
     { id: 'leaders' as NavTab, label: 'Líderes', icon: GitFork, desc: 'Estructura Territorial' },
+    { id: 'activities' as NavTab, label: 'Actividades', icon: CalendarDays, badge: actividades.length > 0 ? actividades.length : undefined, desc: 'Gestión de Actividades Comunitarias' },
     { id: 'polling-stations' as NavTab, label: 'Puestos de Votación', icon: Vote, desc: '108 Puestos Cartagena' },
     { id: 'whatsapp' as NavTab, label: 'Mensajería WhatsApp', icon: MessageCircle, desc: 'Comunicaciones Masivas' },
     { id: 'excel' as NavTab, label: 'Excel & Plantillas', icon: FileSpreadsheet, desc: 'Importar y Exportar' },

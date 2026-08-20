@@ -63,6 +63,26 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
     observaciones: initialActivity?.observaciones || ''
   });
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        lider_id: initialActivity?.lider_id || currentUser?.id || '',
+        tipo_actividad: (initialActivity?.tipo_actividad || 'REUNION_COMUNITARIA') as TipoActividad,
+        fecha: initialActivity?.fecha || new Date().toISOString().split('T')[0],
+        puesto_id: initialActivity?.puesto_id || '',
+        barrio: initialActivity?.barrio || '',
+        meta_asistentes: initialActivity?.meta_asistentes || 20,
+        asistentes_reales: initialActivity?.asistentes_reales || 0,
+        nuevos_contactos_generados: initialActivity?.nuevos_contactos_generados || 0,
+        costo_presupuestado: initialActivity?.costo_presupuestado || 0,
+        costo_real: initialActivity?.costo_real || 0,
+        evidencia_enlace: initialActivity?.evidencia_enlace || '',
+        observaciones: initialActivity?.observaciones || ''
+      });
+      setError(null);
+    }
+  }, [isOpen, initialActivity, currentUser]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

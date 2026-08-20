@@ -8,7 +8,9 @@ import { ContactosList } from './components/ContactosList';
 import { LeadersManagement } from './components/LeadersManagement';
 import { PollingStationsView } from './components/PollingStationsView';
 import { AddContactoModal } from './components/AddContactoModal';
-import { Contacto } from './types';
+import { AddActivityModal } from './components/AddActivityModal';
+import { ActivitiesView } from './components/ActivitiesView';
+import { Contacto, Actividad } from './types';
 
 import { ExcelCenter } from './components/ExcelCenter';
 import { WhatsAppCenter } from './components/WhatsAppCenter';
@@ -21,6 +23,10 @@ const MainContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contactoToEdit, setContactoToEdit] = useState<Contacto | null>(null);
+
+  // Activities Modal State
+  const [isAddActivityModalOpen, setIsAddActivityModalOpen] = useState(false);
+  const [activityToEdit, setActivityToEdit] = useState<Actividad | null>(null);
 
   // Reset tab to dashboard on logout/login
   useEffect(() => {
@@ -81,6 +87,22 @@ const MainContent: React.FC = () => {
     setContactoToEdit(null);
   };
 
+  // Activity Handlers
+  const handleOpenAddActivityModal = () => {
+    setActivityToEdit(null);
+    setIsAddActivityModalOpen(true);
+  };
+
+  const handleEditActivity = (actividad: Actividad) => {
+    setActivityToEdit(actividad);
+    setIsAddActivityModalOpen(true);
+  };
+
+  const handleCloseActivityModal = () => {
+    setIsAddActivityModalOpen(false);
+    setActivityToEdit(null);
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-indigo-500/30">
       {/* Navigation TopBar & BottomBar */}
@@ -107,6 +129,12 @@ const MainContent: React.FC = () => {
         {activeTab === 'leaders' && (
           <LeadersManagement onOpenAddContactoModal={handleOpenAddModal} />
         )}
+        {activeTab === 'activities' && (
+          <ActivitiesView
+            onOpenAddActivityModal={handleOpenAddActivityModal}
+            onEditActivity={handleEditActivity}
+          />
+        )}
         {activeTab === 'polling-stations' && <PollingStationsView />}
         {activeTab === 'whatsapp' && <WhatsAppCenter />}
         {activeTab === 'excel' && <ExcelCenter />}
@@ -118,6 +146,13 @@ const MainContent: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={handleCloseModal}
         contactoToEdit={contactoToEdit}
+      />
+
+      {/* Add / Edit Actividad Modal */}
+      <AddActivityModal
+        isOpen={isAddActivityModalOpen}
+        onClose={handleCloseActivityModal}
+        initialActivity={activityToEdit}
       />
     </div>
   );
