@@ -445,6 +445,22 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         <button
           type="button"
+          onClick={() => handleTabClick('activities')}
+          className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-xl transition ${
+            activeTab === 'activities' ? 'text-indigo-400 font-bold' : 'text-neutral-400 hover:text-neutral-200'
+          }`}
+        >
+          <CalendarDays className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Actividades</span>
+          {actividades.length > 0 && (
+            <span className="absolute top-0 right-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-indigo-600 text-white shadow-sm">
+              {actividades.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => handleTabClick('polling-stations')}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition ${
             activeTab === 'polling-stations' ? 'text-indigo-400 font-bold' : 'text-neutral-400 hover:text-neutral-200'
