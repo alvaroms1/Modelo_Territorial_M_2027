@@ -11,9 +11,11 @@ import {
   Shield,
   Users,
   ChevronDown,
-  Info
+  Info,
+  Search
 } from 'lucide-react';
 import { LOCALIDADES_CARTAGENA } from '../data/cartagenaData';
+import { smartSearch } from '../utils/helpers';
 
 interface AddContactoModalProps {
   isOpen: boolean;
@@ -35,6 +37,8 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
   const [localidad, setLocalidad] = useState('');
   const [barrio, setBarrio] = useState('');
   const [puestoId, setPuestoId] = useState('');
+  const [searchPuestoTerm, setSearchPuestoTerm] = useState('');
+  const [isPuestoDropdownOpen, setIsPuestoDropdownOpen] = useState(false);
   const [mesa, setMesa] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [consentimiento, setConsentimiento] = useState(true);
@@ -62,6 +66,8 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
       setLocalidad(contactoToEdit.sector_comuna || '');
       setBarrio(contactoToEdit.barrio || '');
       setPuestoId(contactoToEdit.puesto_id || '');
+      setSearchPuestoTerm('');
+      setIsPuestoDropdownOpen(false);
       setMesa(contactoToEdit.mesa || '');
       setObservaciones(contactoToEdit.observaciones || '');
       setConsentimiento(contactoToEdit.consentimiento_datos);
@@ -96,6 +102,8 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
       setLocalidad('');
       setBarrio('');
       setPuestoId('');
+      setSearchPuestoTerm('');
+      setIsPuestoDropdownOpen(false);
       setMesa('');
       setObservaciones('');
       setConsentimiento(true);
@@ -158,6 +166,25 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
     });
     return list.sort((a, b) => a.barrio.localeCompare(b.barrio));
   }, []);
+
+  // Puesto seleccionado actualmente
+  const selectedPuesto = useMemo(() => {
+    return pollingStations.find(p => p.id === puestoId);
+  }, [puestoId, pollingStations]);
+
+  // Puestos filtrados en tiempo real por búsqueda inteligente
+  const filteredPollingStations = useMemo(() => {
+    if (!searchPuestoTerm.trim()) return pollingStations;
+    return pollingStations.filter(p =>
+      smartSearch([
+        p.nombre_puesto,
+        p.codigo_puesto,
+        p.direccion,
+        p.barrio_corregimiento,
+        p.comuna_localidad
+      ], searchPuestoTerm)
+    );
+  }, [pollingStations, searchPuestoTerm]);
 
   // Handlers with strict type validation
   const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -463,21 +490,121 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
             {/* ─── PUESTO DE VOTACIÓN Y MESA ─── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-indigo-400 mb-1.5 flex items-center gap-1.5">
-                  <span>🗳️</span> Puesto de Votación
+                <label className="block text-xs font-bold text-amber-400 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span>🗳️</span> Puesto de Votación
+                  </span>
+                  {selectedPuesto && (
+                    <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Puesto Asignado
+                    </span>
+                  )}
                 </label>
-                <select 
-                  value={puestoId} 
-                  onChange={e => setPuestoId(e.target.value)}
-                  className="w-full bg-[#0b0b0e] border border-neutral-800 text-white px-3.5 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition cursor-pointer"
-                >
-                  <option value="">Seleccione un puesto de votación...</option>
-                  {pollingStations.map(p => (
-                    <option key={p.id} value={p.id}>
-                      [{p.codigo_puesto}] {p.nombre_puesto} {p.barrio_corregimiento ? `— (${p.barrio_corregimiento})` : ''}
-                    </option>
-                  ))}
-                </select>
+
+                {selectedPuesto ? (
+                  <div className="flex items-center justify-between p-2.5 bg-[#0b0b0e] border border-emerald-500/40 rounded-xl shadow-sm">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black shrink-0 border border-emerald-500/30">
+                        {selectedPuesto.codigo_puesto}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate">
+                          {selectedPuesto.nombre_puesto}
+                        </p>
+                        <p className="text-[10px] text-neutral-400 truncate">
+                          {selectedPuesto.direccion} {selectedPuesto.barrio_corregimiento ? `— ${selectedPuesto.barrio_corregimiento}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPuestoId('');
+                        setSearchPuestoTerm('');
+                        setIsPuestoDropdownOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-amber-400 hover:text-amber-300 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition shrink-0 ml-2 cursor-pointer"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchPuestoTerm}
+                        onChange={(e) => {
+                          setSearchPuestoTerm(e.target.value);
+                          setIsPuestoDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsPuestoDropdownOpen(true)}
+                        placeholder="Escribe para buscar puesto (ej: Arroyo, Bocagrande, PV-001)..."
+                        className="w-full bg-[#0b0b0e] border border-neutral-800 text-white pl-9 pr-8 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none transition"
+                      />
+                      {searchPuestoTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchPuestoTerm('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Lista desplegable interactiva con resultados en tiempo real */}
+                    {isPuestoDropdownOpen && (
+                      <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto bg-[#141417] border border-neutral-700 rounded-2xl shadow-2xl p-1.5 space-y-1 custom-scrollbar">
+                        <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 flex justify-between items-center border-b border-neutral-800">
+                          <span>{filteredPollingStations.length} PUESTOS DISPONIBLES</span>
+                          <button
+                            type="button"
+                            onClick={() => setIsPuestoDropdownOpen(false)}
+                            className="text-neutral-400 hover:text-white cursor-pointer"
+                          >
+                            Cerrar ✕
+                          </button>
+                        </div>
+                        {filteredPollingStations.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-neutral-400">
+                            No se encontraron puestos con "{searchPuestoTerm}".
+                          </div>
+                        ) : (
+                          filteredPollingStations.map((p) => (
+                            <div
+                              key={p.id}
+                              onClick={() => {
+                                setPuestoId(p.id);
+                                setIsPuestoDropdownOpen(false);
+                                setSearchPuestoTerm('');
+                              }}
+                              className="p-2.5 rounded-xl hover:bg-neutral-800 transition cursor-pointer flex items-center justify-between gap-2 border border-transparent hover:border-neutral-700"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[9px] font-black">
+                                    {p.codigo_puesto}
+                                  </span>
+                                  <p className="text-xs font-bold text-white truncate">
+                                    {p.nombre_puesto}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-neutral-400 truncate mt-0.5">
+                                  {p.direccion} {p.barrio_corregimiento ? `• ${p.barrio_corregimiento}` : ''}
+                                </p>
+                              </div>
+                              <span className="text-[10px] text-amber-400 font-bold shrink-0">
+                                Seleccionar
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-neutral-300 mb-1.5">
