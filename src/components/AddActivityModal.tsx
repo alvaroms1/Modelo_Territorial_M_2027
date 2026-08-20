@@ -109,6 +109,29 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
     }
   }, [isOpen, initialActivity, currentUser, defaultPhase]);
 
+  const leaderInfo = useMemo(() => {
+    const u = users.find(user => user.id === formData.lider_id);
+    if (u) return u;
+    return currentUser;
+  }, [users, formData.lider_id, currentUser]);
+
+  const puestoName = useMemo(() => {
+    if (!formData.puesto_id) return 'Sin puesto asignado';
+    const p = pollingStations.find(st => st.id === formData.puesto_id);
+    return p ? p.nombre_puesto : 'Puesto asociado';
+  }, [pollingStations, formData.puesto_id]);
+
+  const formatTipoLabel = (tipo: string) => {
+    switch (tipo) {
+      case 'REUNION_COMUNITARIA': return 'Reunión Comunitaria';
+      case 'JORNADA_SOCIAL': return 'Jornada Social';
+      case 'CAPACITACION': return 'Capacitación Formativa';
+      case 'VISITA_TERRITORIAL': return 'Visita Casa a Casa';
+      case 'ACTIVIDAD_CULTURAL': return 'Actividad Cultural / Deportiva';
+      default: return tipo.replace(/_/g, ' ');
+    }
+  };
+
   if (!isOpen) return null;
 
   // Live attendance calculation
@@ -398,10 +421,63 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
              ════════════════════════════════════════════════════════ */}
           {activePhase === 'resultados' && !isCreatingNew && (
             <div className="space-y-4 animate-in fade-in duration-200">
+              
+              {/* ─── 🆔 FICHA DE IDENTIFICACIÓN DE LA ACTIVIDAD EN EDICIÓN ─── */}
+              <div className="bg-gradient-to-r from-neutral-950 via-indigo-950/40 to-neutral-950 border border-indigo-500/40 rounded-2xl p-4 shadow-lg space-y-3">
+                <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2.5 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 font-mono font-black text-xs border border-indigo-500/30">
+                      ID: {initialActivity?.id ? initialActivity.id.slice(0, 8).toUpperCase() : 'ACT-PROG'}
+                    </span>
+                    <h3 className="text-sm font-black text-white">
+                      {formatTipoLabel(formData.tipo_actividad)}
+                    </h3>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-300 flex items-center gap-1 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    Fecha: {formData.fecha}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-neutral-800 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-neutral-400 text-[11px] font-semibold">
+                      <Users className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Líder Responsable:</span>
+                    </div>
+                    <p className="font-bold text-white truncate">
+                      {leaderInfo?.nombre_completo || 'Líder Asignado'} 
+                      <span className="text-neutral-400 font-medium text-[11px]"> ({leaderInfo?.rol?.replace(/_/g, ' ') || 'LÍDER'})</span>
+                    </p>
+                  </div>
+
+                  <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-neutral-800 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-neutral-400 text-[11px] font-semibold">
+                      <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Zona / Puesto Territorial:</span>
+                    </div>
+                    <p className="font-bold text-white truncate" title={`${formData.barrio || 'Barrio no especificado'} · ${puestoName}`}>
+                      {formData.barrio || 'Barrio por definir'} · <span className="text-neutral-300 font-normal">{puestoName}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                  <div className="bg-neutral-900/90 rounded-xl p-2.5 border border-neutral-800 flex items-center justify-between">
+                    <span className="text-[11px] text-neutral-400 font-medium">Meta Asistentes:</span>
+                    <strong className="text-white text-xs">{formData.meta_asistentes} proyectados</strong>
+                  </div>
+                  <div className="bg-neutral-900/90 rounded-xl p-2.5 border border-neutral-800 flex items-center justify-between">
+                    <span className="text-[11px] text-neutral-400 font-medium">Presupuesto:</span>
+                    <strong className="text-emerald-400 text-xs">${Number(formData.costo_presupuestado || 0).toLocaleString('es-CO')} COP</strong>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Paso 2 (Post-Actividad):</strong> Ingresa los <strong>asistentes reales</strong>, <strong>nuevos contactos</strong> captados, el <strong>costo real gastado</strong> y las <strong>evidencias</strong> del evento.
+                  <strong>Paso 2 (Resultados Reales):</strong> Diligencia los <strong>asistentes reales</strong> que asistieron, <strong>contactos nuevos</strong> captados, el <strong>costo real gastado</strong> y el enlace a las <strong>evidencias</strong>.
                 </span>
               </div>
 
