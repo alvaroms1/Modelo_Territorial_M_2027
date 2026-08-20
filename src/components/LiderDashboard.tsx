@@ -239,38 +239,32 @@ export const LiderDashboard: React.FC<LiderDashboardProps> = ({
           </div>
 
           {/* Ratios K y L */}
-          <div className="grid grid-cols-2 gap-3 w-full lg:w-auto shrink-0">
-            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[140px]">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase">Contactos (K)</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-black text-white">{leaderMonthScorecard.contactosCount}</span>
-                <span className="text-xs text-neutral-500">/ {leaderMonthScorecard.metaContactos} meta</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto shrink-0">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[160px]">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase">Tus Contactos Activos</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold">Directorio</span>
               </div>
-              <div className="w-full bg-neutral-900 h-1.5 rounded-full overflow-hidden mt-2">
-                <div
-                  className={`h-full rounded-full ${leaderMonthScorecard.cumpK >= 100 ? 'bg-emerald-500' : leaderMonthScorecard.cumpK >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                  style={{ width: `${Math.min(leaderMonthScorecard.cumpK, 100)}%` }}
-                />
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="text-2xl font-black text-white">{stats.contactosRegistrados}</span>
+                <span className="text-xs text-neutral-400 font-medium">simpatizantes</span>
               </div>
-              <span className="text-[10px] font-bold text-neutral-400 mt-1 block">
-                {leaderMonthScorecard.cumpK.toFixed(0)}% cumplimiento
+              <span className="text-[10px] text-neutral-500 mt-1 block">
+                Personas registradas bajo tu liderazgo
               </span>
             </div>
 
-            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[140px]">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase">Actividades (L)</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-black text-white">{leaderMonthScorecard.actCount}</span>
-                <span className="text-xs text-neutral-500">/ {leaderMonthScorecard.metaActividades} meta</span>
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 min-w-[160px]">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase">Jornadas Comunitarias</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Territorio</span>
               </div>
-              <div className="w-full bg-neutral-900 h-1.5 rounded-full overflow-hidden mt-2">
-                <div
-                  className={`h-full rounded-full ${leaderMonthScorecard.cumpL >= 100 ? 'bg-emerald-500' : leaderMonthScorecard.cumpL >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                  style={{ width: `${Math.min(leaderMonthScorecard.cumpL, 100)}%` }}
-                />
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="text-2xl font-black text-emerald-400">{stats.actividadesRealizadas}</span>
+                <span className="text-xs text-neutral-400 font-medium">realizadas · {stats.actividadesProgramadas} programadas</span>
               </div>
-              <span className="text-[10px] font-bold text-neutral-400 mt-1 block">
-                {leaderMonthScorecard.cumpL.toFixed(0)}% cumplimiento
+              <span className="text-[10px] text-neutral-500 mt-1 block">
+                {stats.actividadesProgramadas > 0 ? 'Tienes actividades listas para ejecutar' : 'Programa tu próxima actividad'}
               </span>
             </div>
           </div>

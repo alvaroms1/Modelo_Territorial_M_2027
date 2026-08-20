@@ -347,7 +347,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5">
                   <label className="block text-xs font-semibold text-neutral-300 mb-1 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-indigo-400" /> Meta de Asistentes Proyectada
+                    <Users className="w-3.5 h-3.5 text-indigo-400" /> Meta de Asistentes a Convocar / Llevar *
                   </label>
                   <input
                     type="number"
@@ -357,7 +357,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                     className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3.5 py-2 text-sm text-white font-bold focus:outline-none focus:border-indigo-500"
                     placeholder="Ej. 25 personas"
                   />
-                  <p className="text-[10px] text-neutral-500 mt-1">Personas que se espera convocar</p>
+                  <p className="text-[10px] text-neutral-500 mt-1">Número de personas / simpatizantes que llevarás o convocarás a esta actividad (Ej. 20)</p>
                 </div>
 
                 <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5">
