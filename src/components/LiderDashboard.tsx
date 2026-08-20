@@ -102,8 +102,8 @@ export const LiderDashboard: React.FC = () => {
       {/* Tab Content: Instrucciones */}
       {activeTab === 'instrucciones' && (
         <div className="space-y-6">
-          <div className="bg-[#18181b] border border-neutral-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="bg-gradient-to-r from-indigo-900/50 to-pink-900/50 p-6 border-b border-neutral-800">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-neutral-950/50 p-6 border-b border-neutral-800">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Info className="w-5 h-5 text-indigo-400" />
                 Objetivo del Archivo
@@ -113,9 +113,9 @@ export const LiderDashboard: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-800/50">
               {/* Flujo Recomendado */}
-              <div className="bg-[#18181b] p-6">
+              <div className="bg-neutral-900 p-6">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
                   <ListChecks className="w-5 h-5 text-emerald-400" />
                   Flujo Recomendado
@@ -141,7 +141,7 @@ export const LiderDashboard: React.FC = () => {
               </div>
 
               {/* Reglas de Integridad */}
-              <div className="bg-[#18181b] p-6">
+              <div className="bg-neutral-900 p-6">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
                   <ShieldAlert className="w-5 h-5 text-rose-400" />
                   Reglas de Integridad y Cumplimiento
@@ -202,12 +202,12 @@ export const LiderDashboard: React.FC = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-blue-900/40 text-blue-200">
+                  <thead className="bg-neutral-950/60 text-neutral-300">
                     <tr>
-                      <th className="px-4 py-2 border-b border-blue-800/50">Indicador</th>
-                      <th className="px-4 py-2 border-b border-blue-800/50 text-center">Resultado</th>
-                      <th className="px-4 py-2 border-b border-blue-800/50 text-center">Meta</th>
-                      <th className="px-4 py-2 border-b border-blue-800/50 text-center">Estado</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50">Indicador</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50 text-center">Resultado</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50 text-center">Meta</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50 text-center">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/50 text-neutral-300">
@@ -251,11 +251,11 @@ export const LiderDashboard: React.FC = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-indigo-900/40 text-indigo-200">
+                  <thead className="bg-neutral-950/60 text-neutral-300">
                     <tr>
-                      <th className="px-4 py-2 border-b border-indigo-800/50">Alerta</th>
-                      <th className="px-4 py-2 border-b border-indigo-800/50 text-center">Cantidad</th>
-                      <th className="px-4 py-2 border-b border-indigo-800/50">Criterio</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50">Alerta</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50 text-center">Cantidad</th>
+                      <th className="px-4 py-2 border-b border-neutral-800/50">Criterio</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/50 text-neutral-300">
@@ -292,10 +292,10 @@ export const LiderDashboard: React.FC = () => {
                 <h3 className="text-sm font-bold text-white uppercase">Estado de líder</h3>
               </div>
               <table className="w-full text-sm text-left">
-                <thead className="bg-blue-900/40 text-blue-200">
+                <thead className="bg-neutral-950/60 text-neutral-300">
                   <tr>
-                    <th className="px-4 py-2 border-b border-blue-800/50">Estado</th>
-                    <th className="px-4 py-2 border-b border-blue-800/50 text-right">Cantidad</th>
+                    <th className="px-4 py-2 border-b border-neutral-800/50">Estado</th>
+                    <th className="px-4 py-2 border-b border-neutral-800/50 text-right">Cantidad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/50 text-neutral-300">

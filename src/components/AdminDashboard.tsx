@@ -975,21 +975,21 @@ export const AdminDashboard: React.FC = () => {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse min-w-[1100px]">
                 <thead>
-                  <tr className="bg-[#297db8] text-white text-[11px] font-bold uppercase whitespace-nowrap">
-                    <th className="p-3 border border-[#3b93ce]/30">Año</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Mes</th>
-                    <th className="p-3 border border-[#3b93ce]/30">ID Líder</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Nombre Líder</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Meta Contactos</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Nuevos Contactos</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Contactos Activos</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Meta Activ.</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Activ. Realizadas</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Asistentes</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">% Cump. Contactos</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">% Cump. Activ.</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Semáforo</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Comentarios</th>
+                  <tr className="bg-neutral-950/60 text-neutral-300 text-[11px] font-bold uppercase whitespace-nowrap">
+                    <th className="p-3 border border-neutral-800/50">Año</th>
+                    <th className="p-3 border border-neutral-800/50">Mes</th>
+                    <th className="p-3 border border-neutral-800/50">ID Líder</th>
+                    <th className="p-3 border border-neutral-800/50">Nombre Líder</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Meta Contactos</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Nuevos Contactos</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Contactos Activos</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Meta Activ.</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Activ. Realizadas</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Asistentes</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">% Cump. Contactos</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">% Cump. Activ.</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Semáforo</th>
+                    <th className="p-3 border border-neutral-800/50">Comentarios</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] font-medium">
@@ -1092,21 +1092,21 @@ export const AdminDashboard: React.FC = () => {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse min-w-[1250px]">
                 <thead>
-                  <tr className="bg-[#297db8] text-white text-[11px] font-bold uppercase whitespace-nowrap">
-                    <th className="p-3 border border-[#3b93ce]/30">ID Actividad</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Nombre Líder</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Fecha</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Tipo de Actividad</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Código Puesto</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Barrio</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Meta Asistentes</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Asistentes Reales</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">Nuevos Contactos</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-right">Costo Presupuestado</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-right">Costo Real</th>
-                    <th className="p-3 border border-[#3b93ce]/30 text-center">% Cump. Asistencia</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Evidencia / Enlace</th>
-                    <th className="p-3 border border-[#3b93ce]/30">Observaciones</th>
+                  <tr className="bg-neutral-950/60 text-neutral-300 text-[11px] font-bold uppercase whitespace-nowrap">
+                    <th className="p-3 border border-neutral-800/50">ID Actividad</th>
+                    <th className="p-3 border border-neutral-800/50">Nombre Líder</th>
+                    <th className="p-3 border border-neutral-800/50">Fecha</th>
+                    <th className="p-3 border border-neutral-800/50">Tipo de Actividad</th>
+                    <th className="p-3 border border-neutral-800/50">Código Puesto</th>
+                    <th className="p-3 border border-neutral-800/50">Barrio</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Meta Asistentes</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Asistentes Reales</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">Nuevos Contactos</th>
+                    <th className="p-3 border border-neutral-800/50 text-right">Costo Presupuestado</th>
+                    <th className="p-3 border border-neutral-800/50 text-right">Costo Real</th>
+                    <th className="p-3 border border-neutral-800/50 text-center">% Cump. Asistencia</th>
+                    <th className="p-3 border border-neutral-800/50">Evidencia / Enlace</th>
+                    <th className="p-3 border border-neutral-800/50">Observaciones</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] font-medium">
