@@ -54,7 +54,7 @@ export const LeadersManagement: React.FC = () => {
   );
 
   const getPendingRoleData = (userId: string) => {
-    return pendingRoles[userId] || { rol: 'LIDER_PRINCIPAL', lider_principal_id: '' };
+    return pendingRoles[userId] || { rol: 'LIDER', lider_principal_id: '' };
   };
 
   const handlePendingRoleChange = (userId: string, rol: UserRole) => {
@@ -211,19 +211,21 @@ export const LeadersManagement: React.FC = () => {
                       </td>
                       <td className="px-4 py-4">
                         <div className="space-y-2">
-                          <select
-                            value={roleData.rol}
-                            onChange={(e) => handlePendingRoleChange(user.id, e.target.value as UserRole)}
-                            className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-2 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
-                          >
-                            <option value="LIDER_PRINCIPAL">Líder Principal</option>
-                            <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
-                            <option value="LIDER">Líder</option>
-                            <option value="SUBLIDER">Sublíder</option>
-                            {currentUser?.rol === 'ADMIN' && (
-                              <option value="ADMIN">Administrador</option>
-                            )}
-                          </select>
+                            <select
+                              value={roleData.rol}
+                              onChange={(e) => handlePendingRoleChange(user.id, e.target.value as UserRole)}
+                              className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-2 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
+                            >
+                              {currentUser?.rol === 'ADMIN' && (
+                                <>
+                                  <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                                  <option value="ADMIN">Administrador</option>
+                                  <option value="SUBLIDER">Sublíder</option>
+                                </>
+                              )}
+                              <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
+                              <option value="LIDER">Líder</option>
+                            </select>
 
                           {isSubliderOrLider && (
                             <select
@@ -379,13 +381,15 @@ export const LeadersManagement: React.FC = () => {
                               onChange={(e) => handleRoleChangeActive(leader.id, e.target.value as UserRole, leader.nombre_completo)}
                               className="bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-1.5 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
                             >
-                              <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                              {currentUser?.rol === 'ADMIN' && (
+                                <>
+                                  <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                                  <option value="ADMIN">Administrador</option>
+                                  <option value="SUBLIDER">Sublíder</option>
+                                </>
+                              )}
                               <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
                               <option value="LIDER">Líder</option>
-                              <option value="SUBLIDER">Sublíder</option>
-                              {currentUser?.rol === 'ADMIN' && (
-                                <option value="ADMIN">Administrador</option>
-                              )}
                             </select>
                           )}
 
