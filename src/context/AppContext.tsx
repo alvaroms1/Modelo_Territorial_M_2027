@@ -79,9 +79,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Auto-login from local storage token
+  // Auto-login from session storage token
   useEffect(() => {
-    const savedUserId = localStorage.getItem('mendozismo_current_user_id');
+    const savedUserId = sessionStorage.getItem('mendozismo_current_user_id');
     if (savedUserId && users.length > 0) {
       const user = users.find(u => u.id === savedUserId);
       if (user) setCurrentUser(user);
@@ -165,7 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, error: 'Su cuenta está pendiente de aprobación por el Administrador.' };
       }
       setCurrentUser(user);
-      localStorage.setItem('mendozismo_current_user_id', user.id);
+      sessionStorage.setItem('mendozismo_current_user_id', user.id);
       return { success: true };
     }
     return { success: false, error: 'Credenciales incorrectas o usuario no encontrado.' };
@@ -236,7 +236,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('mendozismo_current_user_id');
+    sessionStorage.removeItem('mendozismo_current_user_id');
   };
 
   const resetFilters = () => setFilters(initialFilters);

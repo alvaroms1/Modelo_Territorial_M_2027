@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { AuthScreen } from './components/AuthScreen';
@@ -14,11 +14,42 @@ import { ExcelCenter } from './components/ExcelCenter';
 import { WhatsAppCenter } from './components/WhatsAppCenter';
 import { DesignThemeView } from './components/DesignThemeView';
 
+const INACTIVITY_TIMEOUT = 7 * 60 * 1000; // 7 minutes in milliseconds
+
 const MainContent: React.FC = () => {
-  const { currentUser, isLoading } = useApp();
+  const { currentUser, isLoading, logout } = useApp();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contactoToEdit, setContactoToEdit] = useState<Contacto | null>(null);
+
+  // Inactivity Auto-Logout
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log('Inactivity timeout reached. Logging out...');
+        logout();
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Initialize timer
+    resetTimer();
+
+    // Listen to user interactions
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    const handleActivity = () => resetTimer();
+
+    events.forEach(event => document.addEventListener(event, handleActivity, { passive: true }));
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, handleActivity));
+    };
+  }, [currentUser, logout]);
 
   if (isLoading) {
     return <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center font-sans">Cargando...</div>;
