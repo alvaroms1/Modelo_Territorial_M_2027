@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Award,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 
 interface AddActivityModalProps {
@@ -40,9 +41,10 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
 
   const isSupervisor = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'LIDER_PRINCIPAL' || currentUser?.rol === 'LIDER_PRINCIPAL_INVITADO';
   const isLider = currentUser?.rol === 'LIDER' || currentUser?.rol === 'SUBLIDER';
+  const isCreatingNew = !initialActivity;
 
   const [activePhase, setActivePhase] = useState<'programar' | 'resultados'>(
-    initialActivity?.asistentes_reales || initialActivity?.costo_real ? 'resultados' : defaultPhase
+    isCreatingNew ? 'programar' : (defaultPhase || 'resultados')
   );
 
   const allBarrios = useMemo(() => {
@@ -97,18 +99,19 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
         evidencia_enlace: initialActivity?.evidencia_enlace || '',
         observaciones: initialActivity?.observaciones || ''
       });
-      setActivePhase(
-        initialActivity?.asistentes_reales || initialActivity?.costo_real || defaultPhase === 'resultados'
-          ? 'resultados'
-          : 'programar'
-      );
+      // If creating new, always force 'programar' phase
+      if (!initialActivity) {
+        setActivePhase('programar');
+      } else {
+        setActivePhase(defaultPhase || 'resultados');
+      }
       setError(null);
     }
   }, [isOpen, initialActivity, currentUser, defaultPhase]);
 
   if (!isOpen) return null;
 
-  // Calculo de cumplimiento en vivo
+  // Live attendance calculation
   const liveCumplimientoAsistencia = formData.meta_asistentes > 0 
     ? (formData.asistentes_reales / formData.meta_asistentes) * 100 
     : 0;
@@ -124,9 +127,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
       ? activePhase === 'resultados'
         ? '¿Confirmas guardar los resultados reales de esta actividad comunitaria?'
         : '¿Deseas guardar los cambios en la programación de esta actividad?'
-      : activePhase === 'programar'
-      ? '¿Confirmas programar esta nueva actividad comunitaria con su presupuesto estimado?'
-      : '¿Confirmas registrar esta actividad comunitaria y sus resultados?';
+      : '¿Confirmas programar esta nueva actividad comunitaria con su presupuesto estimado?';
 
     const isConfirmed = await confirm(actionText);
     if (!isConfirmed) {
@@ -146,7 +147,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
       }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado');
+      setError(err.message || 'Ocurrió un error inesperado al guardar');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,16 +165,18 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-white">
-                {initialActivity
-                  ? activePhase === 'resultados'
-                    ? 'Registrar Resultados de la Actividad'
-                    : 'Editar Programación de Actividad'
-                  : 'Gestión de Actividad Comunitaria'}
+                {isCreatingNew
+                  ? 'Programar Nueva Actividad'
+                  : activePhase === 'resultados'
+                  ? 'Registrar Resultados de la Actividad'
+                  : 'Editar Programación de Actividad'}
               </h2>
               <p className="text-xs text-neutral-400">
-                {isSupervisor
+                {isCreatingNew
+                  ? 'Paso 1: Planifica la fecha, lugar, meta de asistentes y presupuesto estimado'
+                  : isSupervisor
                   ? 'Supervisión, auditoría de gasto real y validación de metas'
-                  : 'Programa tu evento comunal y reporta los resultados e impacto'}
+                  : 'Reporta los asistentes que llegaron, contactos captados, valor real y fotos'}
               </p>
             </div>
           </div>
@@ -186,36 +189,38 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
         </div>
 
         {/* Phase Selector Tabs (Fase 1: Programar vs Fase 2: Resultados) */}
-        <div className="px-6 pt-4 pb-2 bg-neutral-950/50 border-b border-neutral-800/80 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActivePhase('programar')}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              activePhase === 'programar'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                : 'bg-neutral-900 text-neutral-400 hover:text-neutral-200 border border-neutral-800'
-            }`}
-          >
-            <Calendar className="w-4 h-4 text-indigo-300" />
-            <span>1. Programación & Presupuesto</span>
-          </button>
+        {!isCreatingNew && (
+          <div className="px-6 pt-4 pb-2 bg-neutral-950/50 border-b border-neutral-800/80 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActivePhase('programar')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activePhase === 'programar'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                  : 'bg-neutral-900 text-neutral-400 hover:text-neutral-200 border border-neutral-800'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-indigo-300" />
+              <span>1. Programación & Presupuesto</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActivePhase('resultados')}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              activePhase === 'resultados'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                : 'bg-neutral-900 text-neutral-400 hover:text-neutral-200 border border-neutral-800'
-            }`}
-          >
-            <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-            <span>2. Resultados Reales & Gasto Real</span>
-            {formData.asistentes_reales > 0 && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setActivePhase('resultados')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activePhase === 'resultados'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-neutral-900 text-neutral-400 hover:text-neutral-200 border border-neutral-800'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+              <span>2. Resultados Reales & Gasto Real</span>
+              {formData.asistentes_reales > 0 && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
@@ -234,7 +239,12 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Paso 1:</strong> Programa la fecha, lugar, meta estimada de asistentes y el <strong>presupuesto estimado</strong> de recursos que se requerirá para realizar el evento.
+                  <strong>Planificación Previa:</strong> Ingresa la fecha, lugar, meta estimada de asistentes y el <strong>presupuesto estimado</strong> de recursos solicitado para realizar la actividad.
+                  {isCreatingNew && (
+                    <span className="block text-[11px] text-neutral-400 mt-1">
+                      * Una vez realizada la actividad en territorio, podrás registrar los asistentes reales, contactos obtenidos y costos definitivos.
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -386,7 +396,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
           {/* ════════════════════════════════════════════════════════
               FASE 2: RESULTADOS REALES, GASTO REAL Y EVIDENCIAS
              ════════════════════════════════════════════════════════ */}
-          {activePhase === 'resultados' && (
+          {activePhase === 'resultados' && !isCreatingNew && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -521,7 +531,16 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             </button>
 
             <div className="flex items-center gap-2">
-              {activePhase === 'programar' ? (
+              {isCreatingNew ? (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {isSubmitting ? 'Guardando...' : 'Guardar Actividad Programada'}
+                </button>
+              ) : activePhase === 'programar' ? (
                 <>
                   <button
                     type="button"
@@ -536,7 +555,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    {isSubmitting ? 'Guardando...' : initialActivity ? 'Actualizar Programación' : 'Guardar Actividad Programada'}
+                    {isSubmitting ? 'Guardando...' : 'Actualizar Programación'}
                   </button>
                 </>
               ) : (

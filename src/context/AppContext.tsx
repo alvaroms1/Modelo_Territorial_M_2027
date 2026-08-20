@@ -273,17 +273,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addActividad = async (actividad: Omit<Actividad, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase.from('actividades').insert([actividad]).select();
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    const payload = {
+      ...actividad,
+      puesto_id: actividad.puesto_id && uuidRegex.test(actividad.puesto_id) ? actividad.puesto_id : null
+    };
+    const { data, error } = await supabase.from('actividades').insert([payload]).select();
     if (error) return { success: false, error: error.message };
-    if (data) setActividades(prev => [data[0] as Actividad, ...prev]);
+    if (data) {
+      const saved = { ...(data[0] as Actividad), puesto_id: actividad.puesto_id || data[0].puesto_id };
+      setActividades(prev => [saved, ...prev]);
+    }
     return { success: true };
   };
 
   const updateActividad = async (id: string, updates: Partial<Actividad>) => {
-    const { data, error } = await supabase.from('actividades').update(updates).eq('id', id).select();
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    const payload = { ...updates };
+    if ('puesto_id' in payload) {
+      payload.puesto_id = payload.puesto_id && uuidRegex.test(payload.puesto_id) ? payload.puesto_id : null;
+    }
+    const { data, error } = await supabase.from('actividades').update(payload).eq('id', id).select();
     if (error) return { success: false, error: error.message };
     if (data) {
-      setActividades(prev => prev.map(a => a.id === id ? { ...a, ...data[0] } : a));
+      const updated = { ...(data[0] as Actividad), puesto_id: updates.puesto_id !== undefined ? updates.puesto_id : data[0].puesto_id };
+      setActividades(prev => prev.map(a => a.id === id ? updated : a));
     }
     return { success: true };
   };
