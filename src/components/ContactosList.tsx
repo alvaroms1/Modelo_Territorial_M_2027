@@ -45,39 +45,7 @@ export const ContactosList: React.FC<ContactosListProps> = ({ onOpenAddModal, on
     nombre_completo: `${c.nombres} ${c.apellidos || ''}`.trim()
   }));
 
-  let allListItems: any[] = [...visibleContactos];
-
-  if (currentUser?.rol === 'ADMIN' || currentUser?.rol === 'LIDER_PRINCIPAL') {
-    const userLeaders = users.filter(u => u.rol === 'LIDER' && u.estado === 'ACTIVO');
-    const relevantLeaders = (currentUser.rol === 'ADMIN' || currentUser.rol === 'LIDER_PRINCIPAL') ? userLeaders : userLeaders.filter(u => u.lider_principal_id === currentUser.id);
-
-    const fakeContactosFromUsers = relevantLeaders.map(u => ({
-      id: u.id,
-      lider_id: u.lider_principal_id || '',
-      cedula: u.cedula,
-      nombres: u.nombre_completo,
-      apellidos: '',
-      telefono: u.telefono || '',
-      correo: '',
-      genero: 'No especificado',
-      edad: 0,
-      sector_comuna: '',
-      barrio: '',
-      puesto_id: '',
-      mesa: '',
-      rol: 'LIDER (Cuenta Real)',
-      consentimiento_datos: true,
-      estado: 'ACTIVO',
-      participo_actividad: false,
-      isUserMirror: true // special flag
-    }));
-
-    // Exclude those who ALREADY have a Contacto record (by cedula) to avoid duplicates
-    const cedulasContactos = new Set(visibleContactos.map(c => c.cedula));
-    const newFakeContactos = fakeContactosFromUsers.filter(f => !cedulasContactos.has(f.cedula));
-
-    allListItems = [...allListItems, ...newFakeContactos];
-  }
+  const allListItems: Contacto[] = visibleContactos;
 
   const handleClearFilters = () => {
     setSearchTerm('');

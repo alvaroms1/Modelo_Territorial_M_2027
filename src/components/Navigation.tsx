@@ -72,12 +72,12 @@ export const Navigation: React.FC<NavigationProps> = ({
       <header className="sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-rose-600 flex items-center justify-center font-black text-white text-lg tracking-tighter shadow-md shadow-indigo-600/20">
-              MM
+            <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-emerald-500/20 overflow-hidden border border-emerald-500/30">
+              <img src="/logo_mendozismo.png" alt="Mendozismo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm sm:text-base text-neutral-100 tracking-tight">
+                <span className="font-black text-sm sm:text-base text-neutral-100 tracking-tight">
                   Mendozismo
                 </span>
               </div>

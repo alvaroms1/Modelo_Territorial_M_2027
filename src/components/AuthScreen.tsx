@@ -93,15 +93,15 @@ export const AuthScreen: React.FC = () => {
     <div className="min-h-screen bg-neutral-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-indigo-500/30 overflow-y-auto">
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 mt-8">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-rose-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
-            <ShieldCheck className="w-8 h-8 text-white" />
+          <div className="w-20 h-20 rounded-3xl bg-white p-2 flex items-center justify-center shadow-xl shadow-emerald-500/20 border-2 border-emerald-500/30 overflow-hidden">
+            <img src="/logo_mendozismo.png" alt="Mendozismo" className="w-full h-full object-contain" />
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-black text-neutral-100 tracking-tight">
+        <h2 className="mt-5 text-center text-3xl font-black text-neutral-100 tracking-tight">
           Modelo Mendozismo
         </h2>
-        <p className="mt-2 text-center text-sm text-neutral-400">
-          Sistema Integrado de Control Territorial
+        <p className="mt-1 text-center text-xs sm:text-sm text-neutral-400">
+          Sistema Integrado de Control Territorial y Gestión Electoral
         </p>
       </div>
 
