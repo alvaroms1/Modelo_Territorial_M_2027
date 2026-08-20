@@ -123,6 +123,7 @@ const MainContent: React.FC = () => {
             setActiveTab={setActiveTab}
             onOpenAddContactoModal={handleOpenAddModal}
             onOpenAddActivityModal={handleOpenAddActivityModal}
+            onEditActivity={handleEditActivity}
           />
         )}
         {activeTab === 'contactos' && (

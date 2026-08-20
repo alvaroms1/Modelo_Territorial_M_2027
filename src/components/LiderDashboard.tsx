@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { NavTab } from './Navigation';
+import { Actividad } from '../types';
 import {
   BookOpen,
   BarChart3,
@@ -25,12 +26,14 @@ interface LiderDashboardProps {
   setActiveTab?: (tab: NavTab) => void;
   onOpenAddContactoModal?: () => void;
   onOpenAddActivityModal?: (phase?: 'programar' | 'resultados') => void;
+  onEditActivity?: (actividad: Actividad, phase?: 'programar' | 'resultados') => void;
 }
 
 export const LiderDashboard: React.FC<LiderDashboardProps> = ({
   setActiveTab,
   onOpenAddContactoModal,
-  onOpenAddActivityModal
+  onOpenAddActivityModal,
+  onEditActivity
 }) => {
   const [activeTab, setActiveTabLocal] = useState<'tablero' | 'instrucciones'>('tablero');
   const { currentUser, visibleContactos, visibleUsers, users, actividades, pollingStations } = useApp();
@@ -317,7 +320,9 @@ export const LiderDashboard: React.FC<LiderDashboardProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onOpenAddActivityModal) {
+                    if (onEditActivity) {
+                      onEditActivity(act, 'resultados');
+                    } else if (onOpenAddActivityModal) {
                       onOpenAddActivityModal('resultados');
                     } else if (setActiveTab) {
                       setActiveTab('activities');

@@ -3,28 +3,20 @@ import { useApp } from '../context/AppContext';
 import { NavTab } from './Navigation';
 import { LiderDashboard } from './LiderDashboard';
 import { AdminDashboard } from './AdminDashboard';
-import {
-  Users,
-  GitFork,
-  Vote,
-  TrendingUp,
-  Activity,
-  CheckCircle2,
-  FileCheck2,
-  AlertCircle,
-  GitBranch
-} from 'lucide-react';
+import { Actividad } from '../types';
 
 interface DashboardProps {
   setActiveTab: (tab: NavTab) => void;
   onOpenAddContactoModal: () => void;
   onOpenAddActivityModal?: (phase?: 'programar' | 'resultados') => void;
+  onEditActivity?: (actividad: Actividad, phase?: 'programar' | 'resultados') => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   setActiveTab,
   onOpenAddContactoModal,
   onOpenAddActivityModal,
+  onEditActivity,
 }) => {
   const { currentUser, visibleContactos, visibleUsers, users, pollingStations, actividades } = useApp();
 
@@ -53,6 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setActiveTab={setActiveTab}
         onOpenAddContactoModal={onOpenAddContactoModal}
         onOpenAddActivityModal={onOpenAddActivityModal}
+        onEditActivity={onEditActivity}
       />
     );
   }
