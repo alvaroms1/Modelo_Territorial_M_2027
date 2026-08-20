@@ -36,7 +36,7 @@ export const AuthScreen: React.FC = () => {
   };
 
   const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''));
+    setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -187,7 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newUser = {
       cedula: userData.cedula,
       password: userData.password,
-      nombre_completo: userData.nombre_completo,
+      nombre_completo: userData.nombre_completo.toUpperCase(),
       telefono: userData.telefono || null,
       correo: userData.correo || null,
       consentimiento_datos: userData.consentimiento_datos,
@@ -219,10 +219,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = async (userId: string, updates: Partial<UserAccount>) => {
-    const { error } = await supabase.from('lideres').update(updates).eq('id', userId);
+    const finalUpdates = { ...updates };
+    if (finalUpdates.nombre_completo) {
+      finalUpdates.nombre_completo = finalUpdates.nombre_completo.toUpperCase();
+    }
+    
+    const { error } = await supabase.from('lideres').update(finalUpdates).eq('id', userId);
     if (error) return { success: false, error: error.message };
     
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...finalUpdates } : u));
     return { success: true };
   };
 
