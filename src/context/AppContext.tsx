@@ -10,6 +10,8 @@ import {
 } from '../types';
 import { LOCALIDADES_CARTAGENA, CARTAGENA_POLLING_STATIONS } from '../data/cartagenaData';
 
+export type AppTheme = 'dark' | 'pantone-9064' | 'pantone-200081' | 'pantone-124611';
+
 interface AppContextType {
   currentUser: UserAccount | null;
   users: UserAccount[];
@@ -19,6 +21,8 @@ interface AppContextType {
   asignaciones: AsignacionPuesto[];
   filters: FilterState;
   isLoading: boolean;
+  theme: AppTheme;
+  setTheme: (theme: AppTheme) => void;
   login: (cedula: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   registerUser: (userData: Partial<UserAccount>) => Promise<{ success: boolean; error?: string }>;
   updateUserStatus: (userId: string, newEstado: string) => Promise<{ success: boolean; error?: string }>;
@@ -32,6 +36,7 @@ interface AppContextType {
   fetchData: () => Promise<void>;
   addContacto: (contacto: Omit<Contacto, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
   updateContacto: (id: string, updates: Partial<Contacto>) => Promise<{ success: boolean; error?: string }>;
+  deleteContacto: (id: string) => Promise<{ success: boolean; error?: string }>;
   addActividad: (actividad: Omit<Actividad, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
   updateActividad: (id: string, updates: Partial<Actividad>) => Promise<{ success: boolean; error?: string }>;
   deleteActividad: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -60,6 +65,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [asignaciones, setAsignaciones] = useState<AsignacionPuesto[]>([]);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [theme, setThemeState] = useState<AppTheme>(() => {
+    return (localStorage.getItem('mendozismo_theme') as AppTheme) || 'dark';
+  });
+
+  const setTheme = (newTheme: AppTheme) => {
+    setThemeState(newTheme);
+    localStorage.setItem('mendozismo_theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Auto-login from local storage token
   useEffect(() => {
@@ -370,6 +388,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         asignaciones,
         filters,
         isLoading,
+        theme,
+        setTheme,
         login,
         registerUser,
         updateUserStatus,

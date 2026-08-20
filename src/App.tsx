@@ -11,6 +11,7 @@ import { Contacto } from './types';
 
 import { ExcelCenter } from './components/ExcelCenter';
 import { WhatsAppCenter } from './components/WhatsAppCenter';
+import { DesignThemeView } from './components/DesignThemeView';
 
 const MainContent: React.FC = () => {
   const { currentUser, isLoading } = useApp();
@@ -68,6 +69,7 @@ const MainContent: React.FC = () => {
         {activeTab === 'polling-stations' && <PollingStationsView />}
         {activeTab === 'whatsapp' && <WhatsAppCenter />}
         {activeTab === 'excel' && <ExcelCenter />}
+        {activeTab === 'design' && <DesignThemeView />}
       </main>
 
       {/* Add / Edit Contacto Modal */}

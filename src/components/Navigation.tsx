@@ -17,7 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'contactos' | 'leaders' | 'polling-stations' | 'whatsapp' | 'excel';
+export type NavTab = 'dashboard' | 'contactos' | 'leaders' | 'polling-stations' | 'whatsapp' | 'excel' | 'design';
 
 interface NavigationProps {
   activeTab: NavTab;
@@ -54,6 +54,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'polling-stations' as NavTab, label: 'Puestos de Votación', icon: Vote, desc: '108 Puestos Cartagena' },
     { id: 'whatsapp' as NavTab, label: 'Mensajería WhatsApp', icon: MessageCircle, desc: 'Comunicaciones Masivas' },
     { id: 'excel' as NavTab, label: 'Excel & Plantillas', icon: FileSpreadsheet, desc: 'Importar y Exportar' },
+    { id: 'design' as NavTab, label: 'Diseño', icon: Palette, desc: 'Temas & Fondos Pantone' },
   ];
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -196,14 +197,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </div>
                   </div>
                   
-                  <div className="border-t border-neutral-800 pt-1 mt-1">
+                  <div className="border-t border-neutral-800 pt-1 mt-1 space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('design');
+                        setShowRoleMenu(false);
+                      }}
+                      className="w-full text-neutral-200 hover:bg-neutral-800 hover:text-white rounded-xl px-3 py-2 flex items-center gap-2 transition font-medium text-xs cursor-pointer"
+                    >
+                      <Palette className="w-4 h-4 text-emerald-400" />
+                      <span>Cambiar Fondo / Diseño</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => {
                         logout();
                         setShowRoleMenu(false);
                       }}
-                      className="w-full text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl px-3 py-2 flex items-center gap-2 transition font-medium text-sm"
+                      className="w-full text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl px-3 py-2 flex items-center gap-2 transition font-medium text-xs cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Cerrar Sesión</span>
