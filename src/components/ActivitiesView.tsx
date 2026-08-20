@@ -35,7 +35,11 @@ import {
   ShieldCheck,
   CheckCircle,
   Clock3,
-  FileCheck2
+  FileCheck2,
+  Target,
+  Sliders,
+  Settings,
+  Check
 } from 'lucide-react';
 
 interface ActivitiesViewProps {
@@ -65,7 +69,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   onOpenAddActivityModal,
   onEditActivity
 }) => {
-  const { currentUser, users, contactos, visibleContactos, actividades, pollingStations, deleteActividad } = useApp();
+  const { currentUser, users, contactos, visibleContactos, actividades, pollingStations, deleteActividad, updateLeaderGoals } = useApp();
   const { confirm } = useConfirm();
 
   const currentDate = new Date();
@@ -80,6 +84,13 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [semaforoFilter, setSemaforoFilter] = useState<'ALL' | 'VERDE' | 'AMARILLO' | 'ROJO'>('ALL');
   const [selectedActivityDetail, setSelectedActivityDetail] = useState<Actividad | null>(null);
+  
+  // States for Leader Goals programming modal
+  const [selectedLeaderForGoals, setSelectedLeaderForGoals] = useState<UserAccount | null>(null);
+  const [modalMetaContactos, setModalMetaContactos] = useState<number>(20);
+  const [modalMetaActividades, setModalMetaActividades] = useState<number>(4);
+  const [isSavingGoals, setIsSavingGoals] = useState<boolean>(false);
+  const [goalSaveSuccess, setGoalSaveSuccess] = useState<boolean>(false);
 
   // Targets per leader (standard targets for calculation)
   const [targetContactosPerMonth, setTargetContactosPerMonth] = useState<number>(20);
@@ -269,9 +280,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       const nuevosContactos = Math.max(monthContactos.length, contactosDesdeActividades);
       const contactosActivos = contactos.filter(c => (c.lider_id === leader.id || c.sublider_id === leader.id) && c.estado !== 'INACTIVO').length;
 
-      // 3. Metas y Ratios de Cumplimiento (Columnas K y L)
-      const metaC = targetContactosPerMonth || 20;
-      const metaA = targetActividadesPerMonth || 4;
+      // 3. Metas y Ratios de Cumplimiento (Columnas K y L) definidos por líder
+      const metaC = leader.meta_contactos_mes && leader.meta_contactos_mes > 0 ? leader.meta_contactos_mes : 20;
+      const metaA = (leader as any).meta_actividades_mes && (leader as any).meta_actividades_mes > 0 ? (leader as any).meta_actividades_mes : 4;
 
       const ratioK = metaC > 0 ? (nuevosContactos / metaC) : 0;
       const ratioL = metaA > 0 ? (actRealizadas / metaA) : 0;
@@ -379,6 +390,31 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       totalLeaders: monthlyLeaderScorecards.length
     };
   }, [filteredActividades, monthlyLeaderScorecards]);
+
+  const handleOpenGoalModal = (leader: UserAccount) => {
+    setSelectedLeaderForGoals(leader);
+    setModalMetaContactos(leader.meta_contactos_mes > 0 ? leader.meta_contactos_mes : 20);
+    setModalMetaActividades((leader as any).meta_actividades_mes > 0 ? (leader as any).meta_actividades_mes : 4);
+    setGoalSaveSuccess(false);
+  };
+
+  const handleSaveLeaderGoals = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLeaderForGoals) return;
+    setIsSavingGoals(true);
+    try {
+      const res = await updateLeaderGoals(selectedLeaderForGoals.id, modalMetaContactos, modalMetaActividades);
+      if (res.success) {
+        setGoalSaveSuccess(true);
+        setTimeout(() => {
+          setSelectedLeaderForGoals(null);
+          setGoalSaveSuccess(false);
+        }, 800);
+      }
+    } finally {
+      setIsSavingGoals(false);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────
   // 📥 EXCEL EXPORTS (SHEET 1 & SHEET 2)
@@ -1138,14 +1174,28 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Meta Contactos */}
-                      <td className="py-3.5 px-4 text-center font-semibold text-neutral-400">
-                        {row.metaContactos}
+                      {/* Meta Contactos (Editable por Supervisor) */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {isSupervisor ? (
+                          <button
+                            onClick={() => {
+                              const leaderObj = users.find(u => u.id === row.liderId);
+                              if (leaderObj) handleOpenGoalModal(leaderObj);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-white hover:text-amber-300 transition font-bold cursor-pointer group"
+                            title="Hacer clic para editar la meta de nuevos contactos de este líder"
+                          >
+                            <span>{row.metaContactos}</span>
+                            <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-amber-400 transition" />
+                          </button>
+                        ) : (
+                          <span className="font-semibold text-neutral-300">{row.metaContactos}</span>
+                        )}
                       </td>
 
                       {/* Nuevos Contactos */}
                       <td className="py-3.5 px-4 text-center font-bold text-white">
-                        <span className="px-2 py-0.5 rounded-lg bg-neutral-800">
+                        <span className="px-2.5 py-1 rounded-lg bg-neutral-950 border border-neutral-800 text-emerald-300">
                           {row.nuevosContactos}
                         </span>
                       </td>
@@ -1155,9 +1205,23 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         {row.contactosActivos}
                       </td>
 
-                      {/* Meta Actividades */}
-                      <td className="py-3.5 px-4 text-center font-semibold text-neutral-400">
-                        {row.metaActividades}
+                      {/* Meta Actividades (Editable por Supervisor) */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {isSupervisor ? (
+                          <button
+                            onClick={() => {
+                              const leaderObj = users.find(u => u.id === row.liderId);
+                              if (leaderObj) handleOpenGoalModal(leaderObj);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-white hover:text-amber-300 transition font-bold cursor-pointer group"
+                            title="Hacer clic para editar la meta de actividades de este líder"
+                          >
+                            <span>{row.metaActividades}</span>
+                            <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-amber-400 transition" />
+                          </button>
+                        ) : (
+                          <span className="font-semibold text-neutral-300">{row.metaActividades}</span>
+                        )}
                       </td>
 
                       {/* Actividades Realizadas */}
@@ -1416,6 +1480,147 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         </div>
       )}
 
+      {/* ─── MODAL DE PROGRAMACIÓN Y ASIGNACIÓN DE METAS (SUPERVISOR) ─── */}
+      {selectedLeaderForGoals && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-neutral-900 via-amber-950/40 to-neutral-900 p-5 border-b border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Programar Metas del Líder
+                  </h3>
+                  <p className="text-xs text-neutral-400">
+                    Define los objetivos mensuales para la evaluación del semáforo
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLeaderForGoals(null)}
+                className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveLeaderGoals} className="p-5 sm:p-6 space-y-5">
+              
+              {/* Leader Selector / Info */}
+              <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-3.5 space-y-2">
+                <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                  Líder a Evaluar
+                </label>
+                <select
+                  value={selectedLeaderForGoals.id}
+                  onChange={(e) => {
+                    const u = users.find(user => user.id === e.target.value);
+                    if (u) handleOpenGoalModal(u);
+                  }}
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white font-bold focus:outline-none focus:border-amber-500"
+                >
+                  {accessibleUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre_completo} (CC: {u.cedula} - {u.rol.replace(/_/g, ' ')})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Goal 1: Nuevos Contactos */}
+              <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-indigo-400" />
+                    1. Meta de Nuevos Contactos (Mes) *
+                  </label>
+                  <span className="text-[10px] text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded font-mono">
+                    Ratio (K)
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  value={modalMetaContactos === 0 ? '' : modalMetaContactos}
+                  onFocus={e => e.target.select()}
+                  onChange={e => {
+                    const v = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                    setModalMetaContactos(v);
+                  }}
+                  className="w-full bg-neutral-900 border border-indigo-500/40 rounded-xl px-3.5 py-2.5 text-base text-indigo-200 font-black focus:outline-none focus:border-indigo-500"
+                  placeholder="Ej. 20"
+                  required
+                />
+                <p className="text-[11px] text-neutral-400">
+                  Número de nuevos simpatizantes afiliados que debe reportar este líder en el mes.
+                </p>
+              </div>
+
+              {/* Goal 2: Actividades a Realizar */}
+              <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                    <CalendarDays className="w-4 h-4 text-emerald-400" />
+                    2. Meta de Actividades a Realizar (Mes) *
+                  </label>
+                  <span className="text-[10px] text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded font-mono">
+                    Ratio (L)
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  value={modalMetaActividades === 0 ? '' : modalMetaActividades}
+                  onFocus={e => e.target.select()}
+                  onChange={e => {
+                    const v = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                    setModalMetaActividades(v);
+                  }}
+                  className="w-full bg-neutral-900 border border-emerald-500/40 rounded-xl px-3.5 py-2.5 text-base text-emerald-200 font-black focus:outline-none focus:border-emerald-500"
+                  placeholder="Ej. 4"
+                  required
+                />
+                <p className="text-[11px] text-neutral-400">
+                  Cantidad de eventos o reuniones comunitarias que debe ejecutar este líder en el mes.
+                </p>
+              </div>
+
+              {/* Success alert */}
+              {goalSaveSuccess && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>¡Metas guardadas y semáforo recalculado exitosamente!</span>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLeaderForGoals(null)}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-800 text-xs font-medium transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingGoals || modalMetaContactos <= 0 || modalMetaActividades <= 0}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-indigo-600 to-emerald-600 hover:opacity-90 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  {isSavingGoals ? 'Guardando Metas...' : '✓ Guardar Metas del Líder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

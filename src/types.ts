@@ -36,6 +36,7 @@ export interface UserAccount {
   estado: EstadoLider;
   nivel_actividad: NivelActividad;
   meta_contactos_mes: number;
+  meta_actividades_mes?: number;
   observaciones?: string;
   consentimiento_datos: boolean;
   lider_principal_id?: string;

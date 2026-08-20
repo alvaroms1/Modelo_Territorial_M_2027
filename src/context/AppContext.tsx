@@ -43,6 +43,7 @@ interface AppContextType {
   addPollingStation: (station: Omit<PollingStation, 'id' | 'created_at'>) => Promise<{ success: boolean; error?: string }>;
   updatePollingStation: (id: string, updates: Partial<PollingStation>) => Promise<{ success: boolean; error?: string }>;
   deletePollingStation: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateLeaderGoals: (liderId: string, metaContactos: number, metaActividades: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 const initialFilters: FilterState = {
@@ -105,7 +106,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('asignacion_puestos').select('*'),
       ]);
 
-      if (usersData) setUsers(usersData as UserAccount[]);
+      if (usersData) {
+        const enriched = (usersData as UserAccount[]).map(u => ({
+          ...u,
+          meta_contactos_mes: u.meta_contactos_mes > 0 ? u.meta_contactos_mes : 20,
+          meta_actividades_mes: Number(localStorage.getItem(`meta_actividades_${u.id}`)) || u.meta_actividades_mes || 4
+        }));
+        setUsers(enriched);
+      }
       if (contactosData) setContactos(contactosData as Contacto[]);
       
       // Combine database polling stations with seed polling stations
@@ -348,6 +356,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateLeaderGoals = async (liderId: string, metaContactos: number, metaActividades: number) => {
+    try {
+      // 1. Save meta_actividades in localStorage
+      localStorage.setItem(`meta_actividades_${liderId}`, String(metaActividades));
+
+      // 2. Update Supabase lideres table
+      const { error } = await supabase
+        .from('lideres')
+        .update({ meta_contactos_mes: metaContactos })
+        .eq('id', liderId);
+
+      if (error) {
+        console.warn('Supabase update meta_contactos warning:', error);
+      }
+
+      // 3. Update state
+      setUsers(prev => prev.map(u => {
+        if (u.id === liderId) {
+          return {
+            ...u,
+            meta_contactos_mes: metaContactos,
+            meta_actividades_mes: metaActividades
+          };
+        }
+        return u;
+      }));
+
+      if (currentUser && currentUser.id === liderId) {
+        setCurrentUser(prev => prev ? {
+          ...prev,
+          meta_contactos_mes: metaContactos,
+          meta_actividades_mes: metaActividades
+        } : null);
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error updating leader goals:', err);
+      return { success: false, error: err.message || 'Error al guardar metas' };
+    }
+  };
+
   const deletePollingStation = async (id: string) => {
     try {
       const { error } = await supabase.from('puestos_votacion').delete().eq('id', id);
@@ -429,6 +479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPollingStation,
         updatePollingStation,
         deletePollingStation,
+        updateLeaderGoals,
       }}
     >
       {children}

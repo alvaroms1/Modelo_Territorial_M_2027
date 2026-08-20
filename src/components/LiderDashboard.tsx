@@ -82,11 +82,11 @@ export const LiderDashboard: React.FC<LiderDashboardProps> = ({
     const actCount = monthActs.length;
     const contactosCount = monthContactos.length;
 
-    const metaContactos = 20;
-    const metaActividades = 4;
+    const metaContactos = currentUser?.meta_contactos_mes && currentUser.meta_contactos_mes > 0 ? currentUser.meta_contactos_mes : 20;
+    const metaActividades = currentUser?.meta_actividades_mes && currentUser.meta_actividades_mes > 0 ? currentUser.meta_actividades_mes : 4;
 
-    const ratioK = contactosCount / metaContactos;
-    const ratioL = actCount / metaActividades;
+    const ratioK = metaContactos > 0 ? (contactosCount / metaContactos) : 0;
+    const ratioL = metaActividades > 0 ? (actCount / metaActividades) : 0;
 
     let semaforo = 'ROJO';
     let semaforoLabel = 'Rojo (Alerta de Avance)';
