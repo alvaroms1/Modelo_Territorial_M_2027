@@ -44,6 +44,7 @@ interface AppContextType {
   updatePollingStation: (id: string, updates: Partial<PollingStation>) => Promise<{ success: boolean; error?: string }>;
   deletePollingStation: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateLeaderGoals: (liderId: string, metaContactos: number, metaActividades: number) => Promise<{ success: boolean; error?: string }>;
+  recoverPassword: (cedula: string, email?: string) => Promise<{ success: boolean; error?: string; maskedEmail?: string; userName?: string; hasEmail?: boolean }>;
 }
 
 const initialFilters: FilterState = {
@@ -165,6 +166,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const recoverPassword = async (cedula: string, email?: string): Promise<{ success: boolean; error?: string; maskedEmail?: string; userName?: string; hasEmail?: boolean }> => {
+    const cleanCedula = cedula.trim();
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+
+    const user = users.find(u => {
+      if (cleanCedula && u.cedula === cleanCedula) return true;
+      if (cleanEmail && u.correo && u.correo.toLowerCase() === cleanEmail) return true;
+      return false;
+    });
+
+    if (!user) {
+      return { 
+        success: false, 
+        error: 'No se encontró ningún usuario con los datos ingresados. Verifica el número de cédula o correo.' 
+      };
+    }
+
+    const targetEmail = cleanEmail || user.correo;
+
+    if (targetEmail) {
+      try {
+        // Trigger Supabase Auth recovery if configured
+        await supabase.auth.resetPasswordForEmail(targetEmail, {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+        });
+      } catch (err) {
+        console.warn('Supabase auth reset:', err);
+      }
+
+      // Mask email for privacy (e.g. na***a@gmail.com)
+      const atIdx = targetEmail.indexOf('@');
+      let masked = targetEmail;
+      if (atIdx > 2) {
+        const userPart = targetEmail.slice(0, atIdx);
+        const domainPart = targetEmail.slice(atIdx);
+        masked = userPart.slice(0, 2) + '***' + userPart.slice(-1) + domainPart;
+      }
+
+      return {
+        success: true,
+        userName: user.nombre_completo,
+        maskedEmail: masked,
+        hasEmail: true
+      };
+    } else {
+      return {
+        success: true,
+        userName: user.nombre_completo,
+        hasEmail: false
+      };
+    }
+  };
 
   const login = async (cedula: string, password?: string): Promise<{ success: boolean; error?: string }> => {
     const user = users.find(u => u.cedula === cedula && u.password === password);
@@ -480,6 +534,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updatePollingStation,
         deletePollingStation,
         updateLeaderGoals,
+        recoverPassword,
       }}
     >
       {children}
