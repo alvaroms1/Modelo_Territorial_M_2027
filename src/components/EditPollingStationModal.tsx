@@ -96,10 +96,10 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#18181b] rounded-3xl w-full max-w-xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
+      <div className="bg-neutral-900 rounded-3xl w-full max-w-xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 bg-[#09090b] border-b border-neutral-800 flex justify-between items-center shrink-0">
+        <div className="p-6 bg-neutral-950/70 border-b border-neutral-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-amber-500/10 p-2.5 rounded-2xl border border-amber-500/20">
               <Building className="w-6 h-6 text-amber-500" />
@@ -111,7 +111,7 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
           </div>
           <button 
             onClick={onClose}
-            className="text-neutral-500 hover:text-white transition p-2 hover:bg-neutral-800 rounded-xl cursor-pointer"
+            className="text-neutral-400 hover:text-white transition p-2 hover:bg-neutral-800 rounded-xl cursor-pointer"
           >
             <X size={22} />
           </button>
@@ -131,20 +131,20 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
             {/* Código y Nombre */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-1">
-                <label className="block text-xs font-semibold text-neutral-400 mb-1">
+                <label className="block text-xs font-bold text-neutral-300 mb-1">
                   Código
                 </label>
                 <input
                   type="text"
                   value={codigoPuesto}
                   onChange={(e) => setCodigoPuesto(e.target.value.toUpperCase())}
-                  className="w-full bg-[#09090b] border border-neutral-800 text-amber-400 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 outline-none"
+                  className="w-full bg-neutral-950 border border-neutral-700 text-amber-500 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 outline-none"
                   placeholder="PV-001"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                <label className="block text-xs font-bold text-neutral-300 mb-1">
                   Nombre del Puesto *
                 </label>
                 <input
@@ -152,7 +152,7 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
                   required
                   value={nombrePuesto}
                   onChange={(e) => setNombrePuesto(e.target.value.toUpperCase())}
-                  className="w-full bg-[#09090b] border border-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none uppercase"
+                  className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-4 py-2.5 rounded-xl text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none uppercase"
                   placeholder="Nombre del puesto"
                 />
               </div>
@@ -160,14 +160,14 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
 
             {/* Dirección */}
             <div>
-              <label className="block text-xs font-semibold text-neutral-300 mb-1">
+              <label className="block text-xs font-bold text-neutral-300 mb-1">
                 Dirección
               </label>
               <input
                 type="text"
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
-                className="w-full bg-[#09090b] border border-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
+                className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
                 placeholder="Dirección del puesto"
               />
             </div>
@@ -175,13 +175,13 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
             {/* Barrio y Localidad */}
             <div className="space-y-3 pt-2">
               <div>
-                <label className="block text-xs font-semibold text-amber-300 mb-1.5 flex items-center gap-1.5">
+                <label className="block text-xs font-bold text-amber-400 mb-1.5 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-amber-400" /> Asignar Barrio *
                 </label>
                 <select
                   value={barrioCorregimiento}
                   onChange={handleBarrioChange}
-                  className="w-full bg-[#09090b] border border-neutral-700 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-xs font-semibold cursor-pointer"
+                  className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-4 py-3 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-xs font-semibold cursor-pointer"
                 >
                   <option value="">-- [No Asignado] Seleccionar Barrio --</option>
                   {allBarrios.map(b => (
@@ -193,14 +193,14 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 flex items-center gap-1.5">
-                  <Map className="w-3.5 h-3.5 text-neutral-500" /> Localidad Asignada
+                <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1.5">
+                  <Map className="w-3.5 h-3.5 text-neutral-400" /> Localidad Asignada
                 </label>
                 <input
                   type="text"
                   readOnly
                   value={comunaLocalidad || 'No Asignado'}
-                  className="w-full bg-neutral-900/90 border border-neutral-800 text-neutral-300 px-4 py-2.5 rounded-xl outline-none text-xs font-medium cursor-not-allowed"
+                  className="w-full bg-neutral-950/60 border border-neutral-800 text-neutral-300 px-4 py-2.5 rounded-xl outline-none text-xs font-medium cursor-not-allowed"
                 />
               </div>
             </div>
@@ -209,7 +209,7 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-[#09090b] border-t border-neutral-800 flex justify-end gap-3 shrink-0">
+        <div className="p-6 bg-neutral-950/70 border-t border-neutral-800 flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

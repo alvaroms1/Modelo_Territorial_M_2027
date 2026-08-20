@@ -218,7 +218,13 @@
 /* 8. Formularios, Inputs y Selects */
 [data-theme^="pantone"] input,
 [data-theme^="pantone"] select,
-[data-theme^="pantone"] textarea {
+[data-theme^="pantone"] textarea,
+[data-theme^="pantone"] input[type="text"],
+[data-theme^="pantone"] input[type="search"],
+[data-theme^="pantone"] input[type="tel"],
+[data-theme^="pantone"] input[type="email"],
+[data-theme^="pantone"] input[type="number"],
+[data-theme^="pantone"] input[type="date"] {
   background-color: var(--theme-input-bg) !important;
   color: var(--theme-text) !important;
   border-color: var(--theme-input-border) !important;
@@ -234,16 +240,97 @@
   color: var(--theme-text) !important;
 }
 
-/* 9. Ventanas Modales y Popups */
+/* 9. Ventanas Modales, Popups y Diálogos */
 [data-theme^="pantone"] .fixed .bg-zinc-900,
-[data-theme^="pantone"] .fixed .bg-neutral-900 {
+[data-theme^="pantone"] .fixed .bg-neutral-900,
+[data-theme^="pantone"] .fixed .bg-\[\#141417\],
+[data-theme^="pantone"] .fixed .bg-\[\#18181b\] {
   background-color: var(--theme-card) !important;
   color: var(--theme-text) !important;
   border-color: var(--theme-border) !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* 10. Filas de Tablas y Efectos Hover */
+/* Encabezados y Pies de Modales */
+[data-theme^="pantone"] .fixed .bg-neutral-950\/70,
+[data-theme^="pantone"] .fixed .bg-neutral-950\/50,
+[data-theme^="pantone"] .fixed .bg-neutral-950\/60,
+[data-theme^="pantone"] .fixed .bg-\[\#0e0e11\],
+[data-theme^="pantone"] .fixed .bg-\[\#09090b\],
+[data-theme^="pantone"] .fixed .bg-\[\#111114\] {
+  background-color: var(--theme-header) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text) !important;
+}
+
+/* Botones Cancelar y Cerrar en Modales */
+[data-theme^="pantone"] .fixed button.text-neutral-400,
+[data-theme^="pantone"] .fixed button.text-neutral-500,
+[data-theme^="pantone"] .fixed button.text-neutral-300 {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme^="pantone"] .fixed button.text-neutral-400:hover,
+[data-theme^="pantone"] .fixed button.text-neutral-500:hover,
+[data-theme^="pantone"] .fixed button.text-neutral-300:hover {
+  background-color: var(--theme-subcard) !important;
+  color: var(--theme-text) !important;
+}
+
+/* 10. Colores de Acento y Etiquetas en Modo Claro (Máximo Contraste) */
+[data-theme^="pantone"] .text-amber-400,
+[data-theme^="pantone"] .text-amber-300 {
+  color: #b45309 !important;
+}
+
+[data-theme^="pantone"] .text-emerald-400,
+[data-theme^="pantone"] .text-emerald-300 {
+  color: #047857 !important;
+}
+
+[data-theme^="pantone"] .text-indigo-400,
+[data-theme^="pantone"] .text-indigo-300 {
+  color: #4338ca !important;
+}
+
+[data-theme^="pantone"] .text-rose-400,
+[data-theme^="pantone"] .text-rose-300 {
+  color: #be123c !important;
+}
+
+[data-theme^="pantone"] .text-purple-400,
+[data-theme^="pantone"] .text-purple-300 {
+  color: #7e22ce !important;
+}
+
+[data-theme^="pantone"] .text-sky-400,
+[data-theme^="pantone"] .text-sky-300 {
+  color: #0369a1 !important;
+}
+
+/* Fondos de Cajas Informativas en Modales */
+[data-theme^="pantone"] .bg-indigo-950\/20,
+[data-theme^="pantone"] .bg-indigo-500\/10 {
+  background-color: rgba(67, 56, 202, 0.08) !important;
+  border-color: rgba(67, 56, 202, 0.25) !important;
+}
+
+[data-theme^="pantone"] .bg-amber-500\/10 {
+  background-color: rgba(180, 83, 9, 0.08) !important;
+  border-color: rgba(180, 83, 9, 0.25) !important;
+}
+
+[data-theme^="pantone"] .bg-rose-500\/10 {
+  background-color: rgba(190, 18, 60, 0.08) !important;
+  border-color: rgba(190, 18, 60, 0.25) !important;
+}
+
+[data-theme^="pantone"] .bg-emerald-500\/10 {
+  background-color: rgba(4, 120, 87, 0.08) !important;
+  border-color: rgba(4, 120, 87, 0.25) !important;
+}
+
+/* 11. Filas de Tablas y Efectos Hover */
 [data-theme^="pantone"] table tbody tr:hover,
 [data-theme^="pantone"] .hover\:bg-neutral-800\/30:hover,
 [data-theme^="pantone"] .hover\:bg-rose-500\/5:hover {

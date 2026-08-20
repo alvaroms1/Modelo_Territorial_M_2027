@@ -113,14 +113,14 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#141417] rounded-3xl w-full max-w-xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col max-h-[92vh] animate-in fade-in">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
+      <div className="bg-neutral-900 rounded-3xl w-full max-w-xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="p-6 bg-[#0e0e11] border-b border-neutral-800 flex justify-between items-center shrink-0">
+        <div className="p-6 bg-neutral-950/70 border-b border-neutral-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-amber-500/10 p-2.5 rounded-2xl border border-amber-500/20">
-              <Building className="w-6 h-6 text-amber-400" />
+              <Building className="w-6 h-6 text-amber-500" />
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">Nuevo Puesto de Votación</h2>
@@ -129,7 +129,7 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
           </div>
           <button 
             onClick={onClose}
-            className="text-neutral-500 hover:text-white transition p-2 hover:bg-neutral-800 rounded-xl cursor-pointer"
+            className="text-neutral-400 hover:text-white transition p-2 hover:bg-neutral-800 rounded-xl cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -145,9 +145,9 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
           )}
 
           {/* Enlace de Búsqueda Externa en Registraduría */}
-          <div className="bg-indigo-950/20 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-xs font-bold text-indigo-300">Búsqueda en la Registraduría</span>
+              <span className="text-xs font-bold text-indigo-400">Búsqueda en la Registraduría</span>
               <p className="text-[11px] text-neutral-400 mt-0.5">
                 Consulta con la cédula el puesto oficial en el censo electoral.
               </p>
@@ -158,92 +158,87 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
               rel="noreferrer"
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-indigo-600/20"
             >
-              <ExternalLink size={13} />
+              <ExternalLink size={14} />
               <span>Ir a Registraduría</span>
             </a>
           </div>
 
           <form id="add-station-form" onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Campo: Nombre del Puesto */}
+            {/* Nombre del Puesto */}
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-xs font-bold text-neutral-200">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-neutral-300">
                   Nombre del Puesto de Votación <span className="text-rose-500">*</span>
                 </label>
                 <button
                   type="button"
-                  onClick={handlePasteNombre}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 transition cursor-pointer"
-                  title="Pegar texto copiado"
+                  onClick={handlePaste}
+                  className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition cursor-pointer"
+                  title="Pegar texto del portapapeles"
                 >
-                  <ClipboardPaste size={12} />
+                  <ClipboardPaste className="w-3.5 h-3.5" />
                   <span>Pegar</span>
                 </button>
               </div>
-
               <input
                 ref={nombreInputRef}
                 type="text"
-                required
                 value={nombrePuesto}
                 onChange={(e) => setNombrePuesto(e.target.value.toUpperCase())}
-                className="w-full bg-[#0b0b0e] border border-neutral-800 text-white px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition uppercase text-xs font-medium"
-                placeholder="Ej: I.E. SOLEDAD ACOSTA DE SAMPER"
+                placeholder="EJ: I.E. SOLEDAD ACOSTA DE SAMPER"
+                className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-xs font-bold uppercase transition"
+                required
               />
-
               {showPasteHint && (
-                <div className="mt-2 p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-300 text-xs animate-in fade-in flex items-center gap-2">
-                  <ClipboardPaste size={14} className="shrink-0 text-indigo-400" />
-                  <span>En tu móvil: mantén presionado el cuadro de texto y toca <strong>"Pegar"</strong>.</span>
-                </div>
+                <p className="text-[10px] text-amber-400/90 mt-1 flex items-center gap-1">
+                  💡 Si tu navegador no permite el botón pegar, presiona <strong className="underline">Ctrl+V</strong> o mantén presionado el cuadro de texto.
+                </p>
               )}
             </div>
 
-            {/* Campo: Dirección */}
+            {/* Dirección */}
             <div>
-              <label className="block text-xs font-bold text-neutral-200 mb-1.5">
+              <label className="block text-xs font-bold text-neutral-300 mb-1.5">
                 Dirección del Puesto
               </label>
               <input
                 type="text"
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
-                className="w-full bg-[#0b0b0e] border border-neutral-800 text-white px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-xs font-medium"
                 placeholder="Ej: Calle 30 # 48-152"
+                className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-xs font-medium transition"
               />
             </div>
 
-            {/* Campo: Barrio y Localidad */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Barrio y Localidad */}
+            <div className="space-y-4 pt-1">
               <div>
-                <label className="block text-xs font-bold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-amber-400" /> Barrio del Puesto <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-amber-400 mb-1.5 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> Barrio del Puesto <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  required
                   value={barrioCorregimiento}
-                  onChange={handleBarrioChange}
-                  className="w-full bg-[#0b0b0e] border border-neutral-800 text-white px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-xs cursor-pointer"
+                  onChange={(e) => handleBarrioChange(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-700 text-neutral-100 px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-xs font-semibold cursor-pointer transition"
+                  required
                 >
                   <option value="">Seleccionar Barrio...</option>
-                  {allBarrios.map(b => (
-                    <option key={b.barrio} value={b.barrio}>
-                      {b.barrio}
-                    </option>
+                  {allBarrios.map((b) => (
+                    <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-400 mb-1.5 flex items-center gap-1.5">
+                <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1">
                   <Map className="w-3.5 h-3.5 text-neutral-400" /> Localidad (Asignada automáticamente)
                 </label>
                 <input
                   type="text"
                   readOnly
                   value={comunaLocalidad}
-                  className="w-full bg-neutral-900/60 border border-neutral-800 text-neutral-300 px-3.5 py-2.5 rounded-xl outline-none cursor-not-allowed text-xs font-medium"
+                  className="w-full bg-neutral-950/60 border border-neutral-800 text-neutral-300 px-3.5 py-2.5 rounded-xl outline-none cursor-not-allowed text-xs font-medium"
                   placeholder="Se relaciona automáticamente con el barrio"
                 />
               </div>
@@ -253,11 +248,11 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
         </div>
 
         {/* Footer */}
-        <div className="p-5 bg-[#0e0e11] border-t border-neutral-800 flex justify-end gap-3 shrink-0">
+        <div className="p-5 bg-neutral-950/70 border-t border-neutral-800 flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+            className="px-4 py-2.5 rounded-xl text-xs font-bold text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
           >
             Cancelar
           </button>

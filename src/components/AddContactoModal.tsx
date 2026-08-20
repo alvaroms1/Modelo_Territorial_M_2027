@@ -316,10 +316,10 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-md animate-in fade-in">
-      <div className="bg-[#141417] w-full max-w-4xl max-h-[94vh] rounded-[28px] border border-neutral-800 shadow-2xl flex flex-col overflow-hidden">
+      <div className="bg-neutral-900 w-full max-w-4xl max-h-[94vh] rounded-[28px] border border-neutral-800 shadow-2xl flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-neutral-800/80 shrink-0 bg-[#111114]">
+        <div className="flex items-start justify-between p-6 border-b border-neutral-800/80 shrink-0 bg-neutral-950/70">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
               <UserPlus className="w-6 h-6" />
@@ -893,11 +893,11 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-neutral-800/80 shrink-0 bg-[#111114]">
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-neutral-800/80 shrink-0 bg-neutral-950/70">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-bold text-neutral-300 hover:text-white hover:bg-neutral-800 transition"
+            className="px-5 py-2.5 rounded-xl text-xs font-bold text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
           >
             Cancelar
           </button>
