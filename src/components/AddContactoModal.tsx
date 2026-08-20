@@ -250,6 +250,10 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
       return;
     }
 
+    if (!window.confirm(contactoToEdit ? `¿Deseas guardar los cambios del contacto "${nombres.trim()} ${apellidos.trim()}"?` : `¿Confirmas registrar al contacto "${nombres.trim()} ${apellidos.trim()}"?`)) {
+      return;
+    }
+
     if (currentUser) {
       const isMirror = (contactoToEdit as any)?.isUserMirror;
       

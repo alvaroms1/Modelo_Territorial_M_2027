@@ -115,9 +115,10 @@ export const ContactosList: React.FC<ContactosListProps> = ({ onOpenAddModal, on
   };
 
   const handleDelete = async (contacto: any) => {
-    if (confirm('¿Está seguro de eliminar este registro?')) {
+    const fullName = `${contacto.nombres || ''} ${contacto.apellidos || ''}`.trim() || 'este contacto';
+    if (window.confirm(`¿Estás seguro de que deseas eliminar al contacto "${fullName}"? Esta acción no se puede deshacer.`)) {
       if (contacto.isUserMirror) {
-        alert('Este es un Líder con cuenta de acceso real. Para eliminarlo completamente, hágalo desde el módulo "Líderes". Si edita este contacto, se guardará como un votante normal en su estructura.');
+        alert('Este es un Líder con cuenta de acceso real. Para gestionar su usuario, hágalo desde el módulo "Líderes".');
       } else {
         await deleteContacto(contacto.id);
       }

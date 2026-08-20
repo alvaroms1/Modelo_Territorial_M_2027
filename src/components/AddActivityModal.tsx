@@ -73,6 +73,10 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
       return;
     }
 
+    if (!window.confirm(initialActivity ? '¿Deseas guardar los cambios de esta actividad territorial?' : '¿Confirmas registrar esta nueva actividad territorial?')) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 

@@ -214,8 +214,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        logout();
-                        setShowRoleMenu(false);
+                        if (window.confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+                          logout();
+                          setShowRoleMenu(false);
+                        }
                       }}
                       className="w-full text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl px-3 py-2 flex items-center gap-2 transition font-medium text-xs cursor-pointer"
                     >
@@ -379,10 +381,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  logout();
+                  if (window.confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+                    setIsMobileDrawerOpen(false);
+                    logout();
+                  }
                 }}
-                className="w-full py-2 px-3 rounded-xl border border-neutral-800 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                className="w-full py-2 px-3 rounded-xl border border-neutral-800 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Cerrar Sesión</span>

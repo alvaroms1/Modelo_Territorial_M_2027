@@ -78,9 +78,12 @@ export const LeadersManagement: React.FC = () => {
     }));
   };
 
-  const handleApprove = async (userId: string) => {
-    setProcessingId(userId);
+  const handleApprove = async (userId: string, userName?: string) => {
     const roleData = getPendingRoleData(userId);
+    if (!window.confirm(`¿Confirmas aprobar el acceso de ${userName || 'este usuario'} con el rol de ${formatRoleName(roleData.rol)}?`)) {
+      return;
+    }
+    setProcessingId(userId);
     
     await updateUser(userId, {
       estado: 'ACTIVO',
@@ -91,7 +94,10 @@ export const LeadersManagement: React.FC = () => {
     setProcessingId(null);
   };
 
-  const handleRoleChangeActive = async (userId: string, newRole: UserRole) => {
+  const handleRoleChangeActive = async (userId: string, newRole: UserRole, userName?: string) => {
+    if (!window.confirm(`¿Confirmas cambiar el rol de ${userName || 'este líder'} a ${formatRoleName(newRole)}?`)) {
+      return;
+    }
     setProcessingId(userId);
     await updateUser(userId, {
       rol: newRole,
@@ -100,7 +106,10 @@ export const LeadersManagement: React.FC = () => {
     setProcessingId(null);
   };
 
-  const handleParentLeaderChangeActive = async (id: string, parentId: string, isContacto: boolean = false) => {
+  const handleParentLeaderChangeActive = async (id: string, parentId: string, isContacto: boolean = false, subName?: string) => {
+    if (!window.confirm(`¿Confirmas reasignar al sublíder ${subName || ''}?`)) {
+      return;
+    }
     setProcessingId(id);
     if (isContacto) {
       await updateContacto(id, {
@@ -114,8 +123,8 @@ export const LeadersManagement: React.FC = () => {
     setProcessingId(null);
   };
 
-  const handleReject = async (id: string, isContacto: boolean = false) => {
-    if (confirm('¿Está seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
+  const handleReject = async (id: string, isContacto: boolean = false, name?: string) => {
+    if (window.confirm(`¿Estás seguro de eliminar a ${name || 'este usuario'}? Esta acción eliminará el registro y no se puede deshacer.`)) {
       setProcessingId(id);
       if (isContacto) {
         await deleteContacto(id);
@@ -211,7 +220,9 @@ export const LeadersManagement: React.FC = () => {
                             <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
                             <option value="LIDER">Líder</option>
                             <option value="SUBLIDER">Sublíder</option>
-                            <option value="ADMIN">Administrador</option>
+                            {currentUser?.rol === 'ADMIN' && (
+                              <option value="ADMIN">Administrador</option>
+                            )}
                           </select>
 
                           {isSubliderOrLider && (
@@ -236,7 +247,7 @@ export const LeadersManagement: React.FC = () => {
                         ) : (
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => handleApprove(user.id)}
+                              onClick={() => handleApprove(user.id, user.nombre_completo)}
                               className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
                               title="Aprobar acceso con rol asignado"
                             >
@@ -244,7 +255,7 @@ export const LeadersManagement: React.FC = () => {
                               <span>Aprobar</span>
                             </button>
                             <button
-                              onClick={() => handleReject(user.id)}
+                              onClick={() => handleReject(user.id, false, user.nombre_completo)}
                               className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl transition cursor-pointer"
                               title="Rechazar y eliminar registro"
                             >
@@ -354,30 +365,40 @@ export const LeadersManagement: React.FC = () => {
                     </div>
 
                     {/* Role edit / Actions for Leader */}
-                    <div className="flex items-center gap-3 self-end md:self-auto">
-                      {isAdmin && (
-                        <select
-                          value={leader.rol}
-                          disabled={processingId === leader.id}
-                          onChange={(e) => handleRoleChangeActive(leader.id, e.target.value as UserRole)}
-                          className="bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-1.5 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
-                        >
-                          <option value="LIDER_PRINCIPAL">Líder Principal</option>
-                          <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
-                          <option value="LIDER">Líder</option>
-                          <option value="SUBLIDER">Sublíder</option>
-                          <option value="ADMIN">Administrador</option>
-                        </select>
-                      )}
+                    <div className="flex items-center gap-2.5 self-end md:self-auto">
+                      {leader.id === currentUser?.id || leader.cedula === currentUser?.cedula ? (
+                        <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                          Tu Cuenta Actual
+                        </span>
+                      ) : (
+                        <>
+                          {isAdmin && (
+                            <select
+                              value={leader.rol}
+                              disabled={processingId === leader.id}
+                              onChange={(e) => handleRoleChangeActive(leader.id, e.target.value as UserRole, leader.nombre_completo)}
+                              className="bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-semibold px-3 py-1.5 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
+                            >
+                              <option value="LIDER_PRINCIPAL">Líder Principal</option>
+                              <option value="LIDER_PRINCIPAL_INVITADO">Líder Principal Invitado</option>
+                              <option value="LIDER">Líder</option>
+                              <option value="SUBLIDER">Sublíder</option>
+                              {currentUser?.rol === 'ADMIN' && (
+                                <option value="ADMIN">Administrador</option>
+                              )}
+                            </select>
+                          )}
 
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleReject(leader.id)}
-                          disabled={processingId === leader.id}
-                          className="text-xs text-rose-400 hover:text-rose-300 font-bold px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 transition cursor-pointer"
-                        >
-                          {processingId === leader.id ? '...' : 'Eliminar'}
-                        </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleReject(leader.id, false, leader.nombre_completo)}
+                              disabled={processingId === leader.id}
+                              className="text-xs text-rose-400 hover:text-rose-300 font-bold px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 transition cursor-pointer"
+                            >
+                              {processingId === leader.id ? '...' : 'Eliminar'}
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -432,7 +453,7 @@ export const LeadersManagement: React.FC = () => {
                                 <div className="flex flex-col items-end gap-1.5">
                                   <select
                                     value={sublider.lider_principal_id || ''}
-                                    onChange={(e) => handleParentLeaderChangeActive(sublider.id, e.target.value, true)}
+                                    onChange={(e) => handleParentLeaderChangeActive(sublider.id, e.target.value, true, sublider.nombre_completo)}
                                     className="bg-neutral-900 border border-neutral-700 text-neutral-300 text-[10px] px-2 py-1 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer max-w-[140px]"
                                     title="Reasignar a otro Líder"
                                   >
@@ -446,8 +467,8 @@ export const LeadersManagement: React.FC = () => {
 
                                   {isAdmin && (
                                     <button
-                                      onClick={() => handleReject(sublider.id, true)}
-                                      className="text-[10px] text-rose-400 hover:text-rose-300 transition cursor-pointer"
+                                      onClick={() => handleReject(sublider.id, true, sublider.nombre_completo)}
+                                      className="text-[10px] text-rose-400 hover:text-rose-300 transition cursor-pointer font-bold"
                                     >
                                       Eliminar
                                     </button>

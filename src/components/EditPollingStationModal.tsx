@@ -72,6 +72,10 @@ export const EditPollingStationModal: React.FC<EditPollingStationModalProps> = (
       return;
     }
 
+    if (!window.confirm(`¿Deseas guardar los cambios del puesto "${nombrePuesto}"?`)) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     const { success, error: updateError } = await updatePollingStation(station.id, {

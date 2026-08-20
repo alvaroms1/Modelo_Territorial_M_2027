@@ -82,6 +82,10 @@ export const AddPollingStationModal: React.FC<AddPollingStationModalProps> = ({ 
       return;
     }
 
+    if (!window.confirm(`¿Confirmas registrar el nuevo puesto de votación "${nombrePuesto.trim().toUpperCase()}"?`)) {
+      return;
+    }
+
     setIsSubmitting(true);
     
     const generatedCodigo = `PV-${Math.floor(100 + Math.random() * 900)}`;
