@@ -201,11 +201,11 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
   };
 
   const handleNombresChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNombres(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''));
+    setNombres(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase());
   };
 
   const handleApellidosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setApellidos(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''));
+    setApellidos(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '').toUpperCase());
   };
 
   const handleBarrioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -282,8 +282,8 @@ export const AddContactoModal: React.FC<AddContactoModalProps> = ({ isOpen, onCl
       const payload: Omit<Contacto, 'id' | 'created_at'> = {
         lider_id: targetLiderId,
         cedula,
-        nombres,
-        apellidos,
+        nombres: nombres.trim().toUpperCase(),
+        apellidos: apellidos.trim().toUpperCase(),
         telefono,
         correo,
         genero,
